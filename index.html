@@ -1,0 +1,588 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Generador de Horarios</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=IBM+Plex+Sans:wght@400;500;600&family=IBM+Plex+Mono:wght@400;500&display=swap" rel="stylesheet">
+<style>
+  :root {
+    --bg:#f5f4f0;--surface:#fff;--surface2:#f0efe9;--border:#e2e0d8;--border2:#cccab8;
+    --text:#1a1a18;--text2:#6b6960;--text3:#9e9c92;
+    --accent:#2d5be3;--accent-bg:#edf1fc;
+    --danger:#c0392b;--danger-bg:#fdf0ef;--success:#1a7a4a;--success-bg:#edf7f2;
+    --radius:10px;--radius-sm:6px;--shadow:0 1px 3px rgba(0,0,0,.07),0 1px 2px rgba(0,0,0,.04);
+  }
+  *{box-sizing:border-box;margin:0;padding:0}
+  body{font-family:'IBM Plex Sans',sans-serif;background:var(--bg);color:var(--text);min-height:100vh;font-size:14px;line-height:1.5}
+  header{background:var(--surface);border-bottom:1px solid var(--border);padding:0 2rem;display:flex;align-items:center;justify-content:space-between;height:56px;position:sticky;top:0;z-index:100}
+  .logo{font-size:15px;font-weight:600;letter-spacing:-.3px;display:flex;align-items:center;gap:10px;color:var(--text);text-decoration:none}
+  .logo-icon{width:28px;height:28px;background:var(--text);border-radius:6px;display:flex;align-items:center;justify-content:center;color:var(--surface);font-family:'IBM Plex Mono',monospace;font-size:13px;font-weight:500}
+  .header-nav{display:flex;gap:4px}
+  .nav-btn{padding:6px 14px;border:none;background:none;border-radius:var(--radius-sm);cursor:pointer;font-family:inherit;font-size:13px;color:var(--text2);font-weight:500;transition:background .15s,color .15s}
+  .nav-btn:hover{background:var(--surface2);color:var(--text)}
+  .nav-btn.active{background:var(--text);color:var(--surface)}
+  main{max-width:960px;margin:0 auto;padding:2rem 1.5rem}
+  .page{display:none}.page.active{display:block}
+  .page-header{display:flex;justify-content:space-between;align-items:flex-start;margin-bottom:1.5rem;flex-wrap:wrap;gap:12px}
+  .page-title{font-size:22px;font-weight:600;letter-spacing:-.4px}
+  .page-desc{font-size:13px;color:var(--text2);margin-top:3px}
+  .btn{display:inline-flex;align-items:center;gap:6px;padding:7px 16px;border:1px solid var(--border2);border-radius:var(--radius-sm);background:var(--surface);color:var(--text);font-family:inherit;font-size:13px;font-weight:500;cursor:pointer;transition:background .15s,border-color .15s;white-space:nowrap}
+  .btn:hover{background:var(--surface2);border-color:var(--text2)}
+  .btn-primary{background:var(--text);color:var(--surface);border-color:var(--text)}
+  .btn-primary:hover{background:#333;border-color:#333}
+  .btn-sm{padding:4px 10px;font-size:12px}
+  .btn-xs{padding:3px 8px;font-size:11px}
+  .btn-icon{width:26px;height:26px;padding:0;display:inline-flex;align-items:center;justify-content:center;border:none;background:none;cursor:pointer;border-radius:var(--radius-sm);color:var(--text3);font-size:15px;transition:background .15s,color .15s}
+  .btn-icon:hover{background:var(--surface2);color:var(--danger)}
+  .card{background:var(--surface);border:1px solid var(--border);border-radius:var(--radius);padding:1.25rem;margin-bottom:12px;box-shadow:var(--shadow)}
+  .card-header{display:flex;justify-content:space-between;align-items:center;margin-bottom:14px}
+  .course-name{font-size:15px;font-weight:600;letter-spacing:-.2px;display:flex;align-items:center;gap:10px;border:none;background:none;font-family:inherit;color:var(--text);cursor:text;padding:2px 6px;border-radius:4px;transition:background .15s}
+  .course-name:hover,.course-name:focus{background:var(--surface2);outline:none}
+  .badge{font-size:11px;font-weight:500;padding:2px 8px;border-radius:20px;background:var(--surface2);color:var(--text2);border:1px solid var(--border);font-family:'IBM Plex Mono',monospace}
+  .color-dot{width:10px;height:10px;border-radius:50%;flex-shrink:0;display:inline-block}
+  .empty-state{text-align:center;padding:3rem 1rem;color:var(--text3);border:1.5px dashed var(--border2);border-radius:var(--radius);font-size:13px}
+  .empty-state strong{display:block;font-size:15px;color:var(--text2);margin-bottom:6px}
+  .section-block{border:1px solid var(--border);border-radius:var(--radius-sm);margin-bottom:10px;overflow:hidden}
+  .section-block-header{display:flex;align-items:center;gap:8px;padding:8px 12px;background:var(--surface2);border-bottom:1px solid var(--border)}
+  .sec-id-input{font-family:'IBM Plex Mono',monospace;font-size:12px;font-weight:500;width:56px;padding:3px 6px;border:1px solid var(--border);border-radius:4px;background:var(--surface);color:var(--text)}
+  .sec-teacher-input{font-size:12px;padding:3px 8px;border:1px solid var(--border);border-radius:4px;background:var(--surface);color:var(--text);flex:1;min-width:0}
+  .sec-label{font-size:11px;color:var(--text3);font-weight:500;white-space:nowrap}
+  .sessions-list{padding:8px 12px}
+  .sessions-header{display:grid;grid-template-columns:90px 1fr 100px 110px 26px;gap:8px;padding:0 0 5px;font-size:10px;font-weight:500;color:var(--text3);text-transform:uppercase;letter-spacing:.4px;border-bottom:1px solid var(--border);margin-bottom:6px}
+  .session-row{display:grid;grid-template-columns:90px 1fr 100px 110px 26px;gap:8px;align-items:center;margin-bottom:6px}
+  .session-row select{width:100%;padding:4px 7px;border:1px solid var(--border);border-radius:4px;background:var(--surface);color:var(--text);font-family:inherit;font-size:12px}
+  .session-row select:focus{outline:none;border-color:var(--accent);box-shadow:0 0 0 2px rgba(45,91,227,.1)}
+  .time-group{display:flex;align-items:center;gap:4px}
+  .time-group select{flex:1}
+  .time-sep{font-size:11px;color:var(--text3);flex-shrink:0}
+  .type-T{background:#dbeafe;color:#1e40af;border-color:#93c5fd}
+  .type-P{background:#d1fae5;color:#065f46;border-color:#6ee7b7}
+  .type-L{background:#fef3c7;color:#92400e;border-color:#fcd34d}
+  .type-badge{font-size:10px;font-weight:600;padding:2px 6px;border-radius:4px;border:1px solid;font-family:'IBM Plex Mono',monospace;display:inline-block}
+  .add-session-row{padding:4px 12px 10px}
+  .group-header{font-size:12px;font-weight:600;letter-spacing:.3px;text-transform:uppercase;padding:6px 0 8px;margin-top:1.25rem;border-bottom:1px solid var(--border);display:flex;align-items:center;justify-content:space-between;color:var(--text2)}
+  .group-header:first-child{margin-top:0}
+  .group-count{font-family:'IBM Plex Mono',monospace;font-size:11px;background:var(--surface2);border:1px solid var(--border);border-radius:20px;padding:1px 8px;color:var(--text3)}
+  .group-ok .group-header{color:var(--success)}
+  .group-ok .group-count{background:var(--success-bg);border-color:#6ee7b7;color:var(--success)}
+  .group-warn .group-header{color:#92400e}
+  .group-warn .group-count{background:#fef3c7;border-color:#fcd34d;color:#92400e}
+  .group-bad .group-header{color:var(--danger)}
+  .group-bad .group-count{background:var(--danger-bg);border-color:#f0cdc9;color:var(--danger)}
+  .combo-card.allowed{border-color:#fcd34d;background:#fefce8}
+  .tag-warn{background:#fef3c7;color:#92400e}
+  .group-mixed .group-header{color:#92400e}
+  .group-mixed .group-count{background:#fef3c7;border-color:#fcd34d;color:#92400e}
+  .course-check-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(200px,1fr));gap:8px;margin-bottom:1.5rem}
+  .course-check-item{background:var(--surface);border:1px solid var(--border);border-radius:var(--radius-sm);padding:10px 12px;display:flex;align-items:center;gap:10px;cursor:pointer;transition:border-color .15s,background .15s}
+  .course-check-item:hover{border-color:var(--border2);background:var(--surface2)}
+  .course-check-item.checked{border-color:var(--accent);background:var(--accent-bg)}
+  .course-check-item input[type=checkbox]{accent-color:var(--accent);width:15px;height:15px;cursor:pointer}
+  .check-label{font-size:13px;font-weight:500;flex:1}
+  .check-secs{font-size:11px;color:var(--text3);font-family:'IBM Plex Mono',monospace}
+  .stats-row{display:flex;gap:10px;margin-bottom:1.5rem;flex-wrap:wrap}
+  .stat-card{background:var(--surface);border:1px solid var(--border);border-radius:var(--radius-sm);padding:10px 18px;text-align:center;box-shadow:var(--shadow);min-width:100px}
+  .stat-val{font-size:24px;font-weight:600;letter-spacing:-.5px;font-family:'IBM Plex Mono',monospace}
+  .stat-lbl{font-size:11px;color:var(--text2);margin-top:2px}
+  .stat-ok .stat-val{color:var(--success)}.stat-bad .stat-val{color:var(--danger)}
+  .combos-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(230px,1fr));gap:10px}
+  .combo-card{background:var(--surface);border:1px solid var(--border);border-radius:var(--radius);padding:14px;cursor:pointer;transition:border-color .15s,box-shadow .15s;box-shadow:var(--shadow)}
+  .combo-card:hover{border-color:var(--border2);box-shadow:0 3px 10px rgba(0,0,0,.09)}
+  .combo-card.selected{border:2px solid var(--accent);background:var(--accent-bg)}
+  .combo-card.conflict{border-color:#f0cdc9;background:var(--danger-bg)}
+  .combo-num{font-size:10px;font-family:'IBM Plex Mono',monospace;color:var(--text3);margin-bottom:6px;font-weight:500}
+  .combo-item{font-size:12px;color:var(--text2);margin-bottom:4px}
+  .combo-item strong{color:var(--text)}
+  .combo-tag{margin-top:8px;font-size:11px;font-weight:500;padding:2px 8px;border-radius:20px;display:inline-block}
+  .tag-ok{background:var(--success-bg);color:var(--success)}.tag-bad{background:var(--danger-bg);color:var(--danger)}
+  .schedule-wrap{overflow-x:auto;border-radius:var(--radius);box-shadow:var(--shadow)}
+  .schedule-table{width:100%;min-width:580px;border-collapse:collapse;background:var(--surface)}
+  .schedule-table th{background:var(--surface2);padding:8px 6px;text-align:center;font-size:12px;font-weight:600;color:var(--text2);border:1px solid var(--border);letter-spacing:.3px}
+  .schedule-table td{border:1px solid var(--border);height:38px;text-align:center;vertical-align:middle;padding:2px}
+  .time-cell{font-size:11px;color:var(--text3);font-family:'IBM Plex Mono',monospace;font-weight:500;background:var(--surface2)!important;width:58px;padding:0 8px}
+  .cell-block{border-radius:5px;padding:3px 5px;font-size:10px;line-height:1.3;font-weight:500;margin:1px}
+  .legend{margin-top:1.25rem;display:flex;flex-wrap:wrap;gap:8px}
+  .legend-item{display:flex;align-items:center;gap:6px;font-size:12px;background:var(--surface);border:1px solid var(--border);border-radius:var(--radius-sm);padding:5px 12px;flex-wrap:wrap}
+  footer{text-align:center;padding:2rem;color:var(--text3);font-size:12px;border-top:1px solid var(--border);margin-top:3rem}
+  @media(max-width:600px){
+    header{padding:0 1rem}main{padding:1.25rem 1rem}
+    .nav-btn span{display:none}
+    .session-row{grid-template-columns:80px 1fr 26px}
+  }
+
+  /* Block info popup */
+  .block-popup{position:fixed;z-index:9999;background:var(--surface);border:1px solid var(--border2);border-radius:var(--radius);box-shadow:0 8px 24px rgba(0,0,0,0.13);padding:14px 16px;min-width:200px;max-width:280px;pointer-events:none;opacity:0;transition:opacity .15s}
+  .block-popup.visible{opacity:1;pointer-events:auto}
+  .popup-title{font-size:14px;font-weight:600;margin-bottom:6px;color:var(--text)}
+  .popup-row{font-size:12px;color:var(--text2);margin-bottom:3px;display:flex;gap:6px}
+  .popup-label{color:var(--text3);font-size:11px;font-weight:500;min-width:52px}
+  .popup-close{position:absolute;top:8px;right:8px;width:20px;height:20px;display:flex;align-items:center;justify-content:center;border:none;background:none;cursor:pointer;color:var(--text3);font-size:14px;border-radius:4px}
+  .popup-close:hover{background:var(--surface2);color:var(--text)}
+</style>
+</head>
+<body>
+<header>
+  <a class="logo" href="#">
+    <div class="logo-icon">Hx</div>
+    Generador de Horarios
+  </a>
+  <nav class="header-nav">
+    <button class="nav-btn active" onclick="showPage('cursos')" id="nav-cursos"><span>📚 </span>Cursos</button>
+    <button class="nav-btn" onclick="showPage('generar')" id="nav-generar"><span>⚡ </span>Generar</button>
+    <button class="nav-btn" onclick="showPage('resultado')" id="nav-resultado"><span>📅 </span>Resultado</button>
+  </nav>
+</header>
+
+<main>
+  <div class="page active" id="page-cursos">
+    <div class="page-header">
+      <div>
+        <h1 class="page-title">Cursos</h1>
+        <p class="page-desc">Cada sección puede tener varias sesiones semanales (ej: Lun + Mié).</p>
+      </div>
+      <button class="btn btn-primary" onclick="addCourse()">+ Agregar curso</button>
+    </div>
+    <div id="courses-list"></div>
+  </div>
+
+  <div class="page" id="page-generar">
+    <div class="page-header">
+      <div>
+        <h1 class="page-title">Generar horario</h1>
+        <p class="page-desc">Selecciona los cursos y encuentra todas las combinaciones posibles sin cruces.</p>
+      </div>
+      <button class="btn btn-primary" onclick="generate()">⚡ Generar combinaciones</button>
+    </div>
+    <div id="course-selector"></div>
+    <div id="combos-out"></div>
+  </div>
+
+  <div class="page" id="page-resultado">
+    <div class="page-header">
+      <div>
+        <h1 class="page-title">Horario seleccionado</h1>
+        <p class="page-desc">Vista semanal de la combinación elegida.</p>
+      </div>
+      <button class="btn" onclick="showPage('generar')">← Volver</button>
+    </div>
+    <div id="result-out"></div>
+  </div>
+</main>
+
+<footer>Generador de Horarios — Los datos se guardan en tu navegador.</footer>
+
+<script>
+const DIAS=['Lun','Mar','Mié','Jue','Vie','Sáb'];
+const HORAS=['07:00','08:00','09:00','10:00','11:00','12:00','13:00','14:00','15:00','16:00','17:00','18:00','19:00','20:00','21:00'];
+const PAL=[
+  {bg:'#dbeafe',fg:'#1e40af'},{bg:'#d1fae5',fg:'#065f46'},{bg:'#fef3c7',fg:'#92400e'},
+  {bg:'#fce7f3',fg:'#9d174d'},{bg:'#ede9fe',fg:'#4c1d95'},{bg:'#ffedd5',fg:'#7c2d12'},
+  {bg:'#dcfce7',fg:'#14532d'},{bg:'#e0f2fe',fg:'#0c4a6e'},
+];
+
+// Model: courses[{id, name, sections:[{id, teacher, sessions:[{day,start,end}]}]}]
+let courses=JSON.parse(localStorage.getItem('horarios_v2')||'null')||[
+  {id:1,name:'Cálculo II',sections:[
+    {id:'A',teacher:'Dr. Pérez',sessions:[{day:'Lun',start:'08:00',end:'10:00',type:'T'},{day:'Mié',start:'08:00',end:'10:00',type:'T'}]},
+    {id:'B',teacher:'Mg. Torres',sessions:[{day:'Mar',start:'14:00',end:'16:00',type:'T'},{day:'Jue',start:'14:00',end:'16:00',type:'T'}]},
+  ]},
+  {id:2,name:'Física I',sections:[
+    {id:'A',teacher:'Dr. Quispe',sessions:[{day:'Lun',start:'10:00',end:'12:00',type:'T'},{day:'Vie',start:'10:00',end:'12:00',type:'T'}]},
+    {id:'B',teacher:'Dr. Quispe',sessions:[{day:'Mar',start:'08:00',end:'10:00',type:'T'},{day:'Jue',start:'08:00',end:'10:00',type:'T'}]},
+  ]},
+  {id:3,name:'Álgebra Lineal',sections:[
+    {id:'A',teacher:'Mg. Vargas',sessions:[{day:'Mié',start:'12:00',end:'14:00',type:'T'},{day:'Vie',start:'12:00',end:'14:00',type:'T'}]},
+  ]},
+];
+let nextId=Math.max(...courses.map(c=>c.id),0)+1;
+let selIds=courses.map(c=>c.id);
+let allResults=[],selectedCombo=null;
+
+function save(){localStorage.setItem('horarios_v2',JSON.stringify(courses));}
+function esc(s){return String(s).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;');}
+function toMin(t){const[h,m]=t.split(':').map(Number);return h*60+m;}
+
+function showPage(p){
+  document.querySelectorAll('.page').forEach(e=>e.classList.remove('active'));
+  document.querySelectorAll('.nav-btn').forEach(e=>e.classList.remove('active'));
+  document.getElementById('page-'+p).classList.add('active');
+  document.getElementById('nav-'+p).classList.add('active');
+  if(p==='generar')renderSelector();
+  if(p==='resultado')renderResult();
+}
+
+function renderCourses(){
+  const el=document.getElementById('courses-list');
+  if(!courses.length){el.innerHTML='<div class="empty-state"><strong>No hay cursos aún</strong>Usa el botón "Agregar curso" para empezar.</div>';return;}
+  el.innerHTML=courses.map((c,ci)=>{
+    const p=PAL[ci%PAL.length];
+    return `<div class="card">
+      <div class="card-header">
+        <div style="display:flex;align-items:center;gap:8px;flex:1;min-width:0">
+          <span class="color-dot" style="background:${p.bg};border:2px solid ${p.fg}"></span>
+          <span class="course-name" contenteditable="true"
+            onblur="updCourseName(${c.id},this.textContent.trim())"
+            onkeydown="if(event.key==='Enter'){event.preventDefault();this.blur()}"
+          >${esc(c.name)}</span>
+          <span class="badge">${c.sections.length} secc.</span>
+        </div>
+        <div style="display:flex;gap:6px;flex-shrink:0">
+          <button class="btn btn-sm" onclick="addSection(${c.id})">+ Sección</button>
+          <button class="btn-icon" onclick="removeCourse(${c.id})">×</button>
+        </div>
+      </div>
+      ${c.sections.map(s=>`
+        <div class="section-block">
+          <div class="section-block-header">
+            <span class="sec-label">Sec.</span>
+            <input class="sec-id-input" value="${esc(s.id)}" onchange="updSec(${c.id},'${s.id}','id',this.value)">
+            <span class="sec-label">Docente</span>
+            <input class="sec-teacher-input" value="${esc(s.teacher||'')}" placeholder="Nombre del docente" onchange="updSec(${c.id},'${s.id}','teacher',this.value)">
+            <button class="btn-icon" onclick="removeSection(${c.id},'${s.id}')">×</button>
+          </div>
+          <div class="sessions-list">
+            <div class="sessions-header"><span>Día</span><span>Horario</span><span>Tipo</span><span>Salón</span><span></span></div>
+            ${s.sessions.map((ses,si)=>`
+            <div class="session-row">
+              <select onchange="updSes(${c.id},'${s.id}',${si},'day',this.value)">
+                ${DIAS.map(d=>`<option ${ses.day===d?'selected':''}>${d}</option>`).join('')}
+              </select>
+              <div class="time-group">
+                <select onchange="updSes(${c.id},'${s.id}',${si},'start',this.value)">
+                  ${HORAS.map(h=>`<option ${ses.start===h?'selected':''}>${h}</option>`).join('')}
+                </select>
+                <span class="time-sep">–</span>
+                <select onchange="updSes(${c.id},'${s.id}',${si},'end',this.value)">
+                  ${HORAS.map(h=>`<option ${ses.end===h?'selected':''}>${h}</option>`).join('')}
+                </select>
+              </div>
+              <select onchange="updSes(${c.id},'${s.id}',${si},'type',this.value)" style="padding:4px 6px;border:1px solid var(--border);border-radius:4px;background:var(--surface);color:var(--text);font-family:inherit;font-size:12px;width:100%">
+                <option value="T" ${(ses.type||'T')==='T'?'selected':''}>Teoría</option>
+                <option value="P" ${(ses.type||'T')==='P'?'selected':''}>Práctica</option>
+                <option value="L" ${(ses.type||'T')==='L'?'selected':''}>Laboratorio</option>
+              </select>
+              <input value="${esc(ses.salon||'')}" onchange="updSes(${c.id},'${s.id}',${si},'salon',this.value)" placeholder="Salón" style="padding:4px 7px;border:1px solid var(--border);border-radius:4px;background:var(--surface);color:var(--text);font-family:inherit;font-size:12px;width:100%">
+              <button class="btn-icon" onclick="removeSes(${c.id},'${s.id}',${si})">×</button>
+            </div>`).join('')}
+          </div>
+          <div class="add-session-row">
+            <button class="btn btn-xs" onclick="addSes(${c.id},'${s.id}')">+ Sesión</button>
+          </div>
+        </div>`).join('')}
+    </div>`;
+  }).join('');
+}
+
+function addCourse(){
+  courses.push({id:nextId++,name:'Nuevo curso',sections:[{id:'A',teacher:'',sessions:[{day:'Lun',start:'08:00',end:'10:00',type:'T'}]}]});
+  save();renderCourses();
+}
+function removeCourse(id){if(!confirm('¿Eliminar este curso?'))return;courses=courses.filter(c=>c.id!==id);save();renderCourses();}
+function updCourseName(id,n){const c=courses.find(x=>x.id===id);if(c&&n){c.name=n;save();}}
+function addSection(cid){
+  const c=courses.find(x=>x.id===cid);if(!c)return;
+  const L='ABCDEFGHIJKLMNOPQRSTUVWXYZ';
+  c.sections.push({id:L[c.sections.length]||String(c.sections.length+1),teacher:'',sessions:[{day:'Lun',start:'08:00',end:'10:00',type:'T'}]});
+  save();renderCourses();
+}
+function removeSection(cid,sid){const c=courses.find(x=>x.id===cid);if(c){c.sections=c.sections.filter(s=>s.id!==sid);save();renderCourses();}}
+function updSec(cid,sid,f,v){const c=courses.find(x=>x.id===cid);if(!c)return;const s=c.sections.find(x=>x.id===sid);if(s){s[f]=v;save();}}
+function addSes(cid,sid){
+  const c=courses.find(x=>x.id===cid);if(!c)return;
+  const s=c.sections.find(x=>x.id===sid);if(!s)return;
+  s.sessions.push({day:'Lun',start:'08:00',end:'10:00',type:'T'});save();renderCourses();
+}
+function removeSes(cid,sid,si){
+  const c=courses.find(x=>x.id===cid);if(!c)return;
+  const s=c.sections.find(x=>x.id===sid);if(!s)return;
+  if(s.sessions.length<=1){alert('Una sección necesita al menos una sesión.');return;}
+  s.sessions.splice(si,1);save();renderCourses();
+}
+function updSes(cid,sid,si,f,v){
+  const c=courses.find(x=>x.id===cid);if(!c)return;
+  const s=c.sections.find(x=>x.id===sid);if(!s)return;
+  s.sessions[si][f]=v;save();
+}
+
+// Generator
+function renderSelector(){
+  const el=document.getElementById('course-selector');
+  if(!courses.length){el.innerHTML='<div class="empty-state"><strong>No hay cursos</strong>Ve a la pestaña Cursos para agregar.</div>';return;}
+  el.innerHTML=`<div class="course-check-grid">${courses.map((c,ci)=>{
+    const p=PAL[ci%PAL.length],chk=selIds.includes(c.id);
+    return `<label class="course-check-item ${chk?'checked':''}" onclick="toggleChk(this,${c.id})">
+      <input type="checkbox" ${chk?'checked':''} onclick="event.stopPropagation();toggleChk(this.closest('label'),${c.id})">
+      <span class="color-dot" style="background:${p.bg};border:2px solid ${p.fg}"></span>
+      <span class="check-label">${esc(c.name)}</span>
+      <span class="check-secs">${c.sections.length}s</span>
+    </label>`;
+  }).join('')}</div>`;
+}
+function toggleChk(el,id){
+  const cb=el.querySelector('input[type=checkbox]'),on=!cb.checked;cb.checked=on;
+  el.classList.toggle('checked',on);
+  if(on){if(!selIds.includes(id))selIds.push(id);}else{selIds=selIds.filter(x=>x!==id);}
+}
+
+// Returns overlap hours between two sessions (0 if different day or no overlap)
+function overlapHours(a, b){
+  if(a.day!==b.day) return 0;
+  const overlap = Math.min(toMin(a.end),toMin(b.end)) - Math.max(toMin(a.start),toMin(b.start));
+  return overlap > 0 ? overlap/60 : 0;
+}
+
+// Classify session type: T=Teoría, P=Práctica, L=Laboratorio
+function sesType(ses){ return ses.type||'T'; }
+
+// Check conflict between two sections per reglamento.
+// Returns object: { violation: string|null, allowed: string|null }
+//   violation = reglamento broken (counts as a "cruce")
+//   allowed   = overlap exists but within reglamento limits (shown separately)
+function checkSectionConflict(secA, secB, nameA, nameB){
+  let ttHours=0, tplHours=0, hardConflict=false;
+  for(const a of secA.sessions){
+    for(const b of secB.sessions){
+      const h = overlapHours(a,b);
+      if(h===0) continue;
+      const tA=sesType(a), tB=sesType(b);
+      if(tA==='T' && tB==='T'){
+        ttHours += h;
+      } else if((tA==='T'&&(tB==='P'||tB==='L')) || (tB==='T'&&(tA==='P'||tA==='L'))){
+        tplHours += h;
+      } else {
+        hardConflict = true;
+      }
+    }
+  }
+  if(hardConflict) return { violation:`${nameA} ↔ ${nameB}: cruce Práctica/Lab. no permitido`, allowed:null };
+  if(ttHours > 4)  return { violation:`${nameA} ↔ ${nameB}: cruce T-T ${ttHours}h (máx. 4h)`, allowed:null };
+  if(tplHours > 2) return { violation:`${nameA} ↔ ${nameB}: cruce T-P/Lab. ${tplHours}h (máx. 2h)`, allowed:null };
+  // Within limits but overlap exists — report as allowed
+  if(ttHours > 0)  return { violation:null, allowed:`${nameA} ↔ ${nameB}: ${ttHours}h T-T (permitido)` };
+  if(tplHours > 0) return { violation:null, allowed:`${nameA} ↔ ${nameB}: ${tplHours}h T-P/Lab. (permitido)` };
+  return null;
+}
+function cartesian(arrays){
+  if(!arrays.length)return[[]];
+  const rest=cartesian(arrays.slice(1));
+  return arrays[0].flatMap(x=>rest.map(r=>[x,...r]));
+}
+
+function generate(){
+  const sel=courses.filter(c=>selIds.includes(c.id));
+  const out=document.getElementById('combos-out');
+  if(!sel.length){out.innerHTML='<div class="empty-state"><strong>Selecciona al menos un curso</strong></div>';return;}
+  const total=sel.reduce((a,c)=>a*c.sections.length,1);
+  if(total>1000&&!confirm(`Se generarán ${total} combinaciones. ¿Continuar?`))return;
+
+  const combos=cartesian(sel.map(c=>c.sections.map(s=>({course:c,section:s}))));
+  allResults=combos.map(combo=>{
+    // overlaps = all pairs that physically overlap (used for grouping & visual count)
+    // each overlap has: label, allowed (bool), forbidden (bool)
+    let overlaps=[];
+    for(let a=0;a<combo.length;a++)for(let b=a+1;b<combo.length;b++){
+      const res=checkSectionConflict(
+        combo[a].section, combo[b].section,
+        combo[a].course.name+' '+combo[a].section.id,
+        combo[b].course.name+' '+combo[b].section.id
+      );
+      if(res){
+        if(res.violation) overlaps.push({label:res.violation, allowed:false, forbidden:res.violation.includes('no permitido')});
+        if(res.allowed)   overlaps.push({label:res.allowed,   allowed:true,  forbidden:false});
+      }
+    }
+    return{combo, overlaps};
+  });
+
+  const valid=allResults.filter(r=>r.overlaps.length===0).length;
+  // Groups by VISUAL overlap count (any physical overlap = 1 cruce)
+  // Within each group, show reglamento label (permitido / no permitido)
+  function hasForbidden(r){ return r.overlaps.some(o=>o.forbidden); }
+
+  const groups = [
+    { key:'ok',  label:'Sin cruces',   cls:'group-ok',
+      items: allResults.filter(r=>r.overlaps.length===0) },
+    { key:'c1',  label:'Con 1 cruce',  cls:'group-warn',
+      items: allResults.filter(r=>r.overlaps.length===1 && !hasForbidden(r)) },
+    { key:'c1f', label:'Con 1 cruce',  cls:'group-bad',
+      items: allResults.filter(r=>r.overlaps.length===1 && hasForbidden(r)) },
+    { key:'c2',  label:'Con 2 cruces', cls:'group-warn',
+      items: allResults.filter(r=>r.overlaps.length===2 && !hasForbidden(r)) },
+    { key:'c2f', label:'Con 2 cruces', cls:'group-bad',
+      items: allResults.filter(r=>r.overlaps.length===2 && hasForbidden(r)) },
+    { key:'c3',  label:'Con 3 cruces', cls:'group-warn',
+      items: allResults.filter(r=>r.overlaps.length===3 && !hasForbidden(r)) },
+    { key:'c3f', label:'Con 3 cruces', cls:'group-bad',
+      items: allResults.filter(r=>r.overlaps.length===3 && hasForbidden(r)) },
+    { key:'cm',  label:'Con 4+ cruces',cls:'group-bad',
+      items: allResults.filter(r=>r.overlaps.length>=4) },
+  ].filter(g=>g.items.length>0)
+   .reduce((acc,g)=>{
+     // Merge same-label groups into one (e.g. "Con 1 cruce" warn + bad together, sorted by forbidden last)
+     const existing = acc.find(x=>x.label===g.label);
+     if(existing){ existing.items=[...existing.items,...g.items]; existing.cls = existing.items.some(r=>hasForbidden(r))?'group-mixed':existing.cls; }
+     else acc.push({...g});
+     return acc;
+   },[]);
+
+  const LIMIT_PER_GROUP = 30;
+
+  function renderComboCard(r, globalIdx){
+    const hasForbid = r.overlaps.some(o=>o.forbidden);
+    const hasAny    = r.overlaps.length > 0;
+    const cardCls   = hasForbid ? 'conflict' : hasAny ? 'allowed' : '';
+    return `<div class="combo-card ${cardCls}" onclick="selCombo(${globalIdx})" id="cc${globalIdx}">
+      <div class="combo-num">Combinación ${globalIdx+1}</div>
+      ${r.combo.map(x=>{
+        const dias=x.section.sessions.map(s=>s.day+' '+s.start+'–'+s.end).join(' · ');
+        return `<div class="combo-item"><strong>${esc(x.course.name)}</strong> Sec.${esc(x.section.id)}<br><span style="font-size:11px">${dias}</span></div>`;
+      }).join('')}
+      ${hasAny
+        ? r.overlaps.map(o=>`<div class="combo-tag ${o.forbidden?'tag-bad':o.allowed?'tag-warn':'tag-bad'}">
+            ${o.forbidden?'⛔':o.allowed?'~':'⚠'} ${esc(o.label)}
+          </div>`).join('')
+        : '<div class="combo-tag tag-ok">✓ Sin cruces</div>'
+      }
+    </div>`;
+  }
+
+  const groupsHTML = groups.map(g=>{
+    const shown = g.items.slice(0, LIMIT_PER_GROUP);
+    const more = g.items.length > LIMIT_PER_GROUP ? `<p style="font-size:12px;color:var(--text3);margin-top:8px;grid-column:1/-1">... y ${g.items.length - LIMIT_PER_GROUP} más en este grupo.</p>` : '';
+    return `<div class="${g.cls}">
+      <div class="group-header">${g.label}<span class="group-count">${g.items.length}</span></div>
+      <div class="combos-grid" style="margin-top:10px">${shown.map(r=>renderComboCard(r, allResults.indexOf(r))).join('')}${more}</div>
+    </div>`;
+  }).join('');
+
+  const conCruce = allResults.filter(r=>r.overlaps.length>0).length;
+  out.innerHTML=`<div class="stats-row">
+    <div class="stat-card"><div class="stat-val">${allResults.length}</div><div class="stat-lbl">total</div></div>
+    <div class="stat-card stat-ok"><div class="stat-val">${valid}</div><div class="stat-lbl">sin cruces</div></div>
+    <div class="stat-card stat-bad"><div class="stat-val">${conCruce}</div><div class="stat-lbl">con cruce</div></div>
+  </div>${groupsHTML}`;
+}
+function selCombo(i){
+  selectedCombo=allResults[i];
+  document.querySelectorAll('.combo-card').forEach(e=>e.classList.remove('selected'));
+  const target=document.getElementById('cc'+i);
+  if(target) target.classList.add('selected');
+  showPage('resultado');
+}
+
+// Result
+function renderResult(){
+  const el=document.getElementById('result-out');
+  if(!selectedCombo){el.innerHTML='<div class="empty-state"><strong>Ninguna combinación seleccionada</strong>Ve a Generar y haz clic en una combinación.</div>';return;}
+  const combo=selectedCombo.combo;
+
+  // grid stores ARRAY of blocks per cell to support overlaps
+  const grid={};
+  HORAS.forEach(h=>{grid[h]={};DIAS.forEach(d=>grid[h][d]==[]);});
+  HORAS.forEach(h=>DIAS.forEach(d=>grid[h][d]=[]));
+
+  combo.forEach(x=>{
+    const ci=courses.findIndex(c=>c.id===x.course.id);
+    x.section.sessions.forEach(ses=>{
+      const sh=toMin(ses.start),eh=toMin(ses.end);
+      HORAS.forEach(h=>{
+        if(toMin(h)>=sh&&toMin(h)<eh)
+          grid[h][ses.day].push({name:x.course.name,sec:x.section.id,ci,stype:ses.type||'T',teacher:x.section.teacher||'',salon:ses.salon||'',start:ses.start,end:ses.end,day:ses.day});
+      });
+    });
+  });
+
+  const rows=HORAS.map(h=>`<tr><td class="time-cell">${h}</td>${DIAS.map(d=>{
+    const cells=grid[h][d];
+    if(!cells.length) return'<td></td>';
+    const conflict=cells.length>1; // visual overlap
+    const blocks=cells.map(cell=>{
+      const p=PAL[cell.ci%PAL.length];
+      const short=cell.name.length>11?cell.name.substring(0,11)+'…':cell.name;
+      const tLabel={'T':'T','P':'P','L':'Lab'}[cell.stype]||'T';
+      const tStyle={'T':'background:#dbeafe;color:#1e40af','P':'background:#d1fae5;color:#065f46','L':'background:#fef3c7;color:#92400e'}[cell.stype]||'background:#dbeafe;color:#1e40af';
+      const dataInfo=encodeURIComponent(JSON.stringify({name:cell.name,sec:cell.sec,stype:cell.stype,teacher:cell.teacher,salon:cell.salon,start:cell.start,end:cell.end,day:cell.day}));
+      return `<div class="cell-block" style="background:${p.bg};color:${p.fg};${conflict?'border:1px solid #c0392b;':''}cursor:pointer" onclick="showBlockInfo(event,this,'${dataInfo}')">${esc(short)}<br><span style="font-size:9px">Sec.${esc(cell.sec)} <span style="${tStyle};font-size:9px;padding:0 3px;border-radius:3px;font-weight:600">${tLabel}</span></span></div>`;
+    }).join('');
+    return `<td style="${conflict?'background:#fdf0ef;':''}">${blocks}</td>`;
+  }).join('')}</tr>`).join('');
+
+  const hasConflicts=selectedCombo.overlaps.some(o=>!o.allowed);
+  const conflictBanner=hasConflicts?`<div style="background:var(--danger-bg);border:1px solid #f0cdc9;border-radius:var(--radius-sm);padding:10px 14px;margin-bottom:1rem;font-size:13px;color:var(--danger)">
+    ⚠ Esta combinación tiene ${selectedCombo.overlaps.filter(o=>!o.allowed).length} cruce${selectedCombo.overlaps.filter(o=>!o.allowed).length>1?'s':''}:  ${selectedCombo.overlaps.filter(o=>!o.allowed).map(o=>esc(o.label)).join(' — ')}
+  </div>`:'';
+
+  const legend=combo.map(x=>{
+    const ci=courses.findIndex(c=>c.id===x.course.id),p=PAL[ci%PAL.length];
+    const sesStr=x.section.sessions.map(s=>s.day+' '+s.start+'–'+s.end).join(' · ');
+    return `<div class="legend-item"><span class="color-dot" style="background:${p.bg};border:2px solid ${p.fg}"></span><strong>${esc(x.course.name)}</strong> Sec.${esc(x.section.id)}${x.section.teacher?' · '+esc(x.section.teacher):''}<span style="color:var(--text3);font-size:11px">${sesStr}</span></div>`;
+  }).join('');
+
+  el.innerHTML=`${conflictBanner}<div class="schedule-wrap"><table class="schedule-table"><thead><tr><th></th>${DIAS.map(d=>`<th>${d}</th>`).join('')}</tr></thead><tbody>${rows}</tbody></table></div><div class="legend">${legend}</div>`;
+}
+
+renderCourses();
+</script>
+
+<div class="block-popup" id="block-popup">
+  <button class="popup-close" onclick="closePopup()">×</button>
+  <div class="popup-title" id="pp-name"></div>
+  <div class="popup-row"><span class="popup-label">Sección</span><span id="pp-sec"></span></div>
+  <div class="popup-row"><span class="popup-label">Tipo</span><span id="pp-type"></span></div>
+  <div class="popup-row"><span class="popup-label">Día</span><span id="pp-day"></span></div>
+  <div class="popup-row"><span class="popup-label">Horario</span><span id="pp-time"></span></div>
+  <div class="popup-row" id="pp-teacher-row"><span class="popup-label">Docente</span><span id="pp-teacher"></span></div>
+  <div class="popup-row" id="pp-salon-row"><span class="popup-label">Salón</span><span id="pp-salon"></span></div>
+</div>
+
+<script>
+const popup = document.getElementById('block-popup');
+let popupOpen = false;
+
+function showBlockInfo(event, el, encoded){
+  event.stopPropagation();
+  const info = JSON.parse(decodeURIComponent(encoded));
+  const typeNames = {T:'Teoría', P:'Práctica', L:'Laboratorio'};
+  document.getElementById('pp-name').textContent    = info.name;
+  document.getElementById('pp-sec').textContent     = 'Sección ' + info.sec;
+  document.getElementById('pp-type').textContent    = typeNames[info.stype] || info.stype;
+  document.getElementById('pp-day').textContent     = info.day;
+  document.getElementById('pp-time').textContent    = info.start + ' – ' + info.end;
+  const teacherRow = document.getElementById('pp-teacher-row');
+  const salonRow   = document.getElementById('pp-salon-row');
+  if(info.teacher){ document.getElementById('pp-teacher').textContent=info.teacher; teacherRow.style.display='flex'; }
+  else { teacherRow.style.display='none'; }
+  if(info.salon){ document.getElementById('pp-salon').textContent=info.salon; salonRow.style.display='flex'; }
+  else { salonRow.style.display='none'; }
+
+  // Position popup near click, keep within viewport
+  const vw = window.innerWidth, vh = window.innerHeight;
+  let x = event.clientX + 12, y = event.clientY + 12;
+  popup.style.left = x + 'px';
+  popup.style.top  = y + 'px';
+  popup.classList.add('visible');
+  popupOpen = true;
+
+  // Adjust if overflows right/bottom
+  requestAnimationFrame(()=>{
+    const rect = popup.getBoundingClientRect();
+    if(rect.right  > vw - 8) popup.style.left = (event.clientX - rect.width - 12) + 'px';
+    if(rect.bottom > vh - 8) popup.style.top  = (event.clientY - rect.height - 12) + 'px';
+  });
+}
+
+function closePopup(){
+  popup.classList.remove('visible');
+  popupOpen = false;
+}
+
+document.addEventListener('click', (e)=>{
+  if(popupOpen && !popup.contains(e.target)) closePopup();
+});
+document.addEventListener('keydown', (e)=>{ if(e.key==='Escape') closePopup(); });
+</script>
+
+</body>
+</html>
