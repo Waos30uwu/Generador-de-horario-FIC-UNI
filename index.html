@@ -41,6 +41,27 @@
   .course-name{font-size:15px;font-weight:600;letter-spacing:-.2px;display:flex;align-items:center;gap:10px;border:none;background:none;font-family:inherit;color:var(--text);cursor:text;padding:2px 6px;border-radius:4px;transition:background .15s}
   .course-name:hover,.course-name:focus{background:var(--surface2);outline:none}
   .badge{font-size:11px;font-weight:500;padding:2px 8px;border-radius:20px;background:var(--surface2);color:var(--text2);border:1px solid var(--border);font-family:'IBM Plex Mono',monospace}
+  .color-swatch{width:24px;height:24px;border-radius:50%;border:3px solid rgba(0,0,0,.2);cursor:pointer;flex-shrink:0;transition:transform .15s}
+  .color-swatch:hover{transform:scale(1.15)}
+  .course-code-input{font-family:'IBM Plex Mono',monospace;font-size:12px;padding:2px 7px;border:1px solid var(--border);border-radius:4px;background:var(--surface);color:var(--text2);width:90px}
+  /* HSV Color picker */
+  .cpicker{position:absolute;top:32px;left:0;z-index:300;background:var(--surface);border:1px solid var(--border2);border-radius:var(--radius);padding:12px;box-shadow:0 8px 24px rgba(0,0,0,.18);width:220px;visibility:hidden;opacity:0;pointer-events:none;transition:opacity .12s}
+  .cpicker.open{visibility:visible;opacity:1;pointer-events:auto}
+  .cp-sv{width:196px;height:140px;border-radius:6px;position:relative;cursor:crosshair;flex-shrink:0}
+  .cp-sv-white{position:absolute;inset:0;border-radius:6px;background:linear-gradient(to right,#fff,transparent)}
+  .cp-sv-black{position:absolute;inset:0;border-radius:6px;background:linear-gradient(to bottom,transparent,#000)}
+  .cp-pointer{position:absolute;width:12px;height:12px;border-radius:50%;border:2px solid #fff;box-shadow:0 0 0 1px rgba(0,0,0,.4);transform:translate(-50%,-50%);pointer-events:none}
+  .cp-hue{width:196px;height:14px;border-radius:7px;margin-top:10px;cursor:pointer;position:relative;background:linear-gradient(to right,#f00,#ff0,#0f0,#0ff,#00f,#f0f,#f00)}
+  .cp-hue-thumb{position:absolute;top:50%;width:14px;height:14px;border-radius:50%;border:2px solid #fff;box-shadow:0 0 0 1px rgba(0,0,0,.4);transform:translate(-50%,-50%);pointer-events:none}
+  .cp-preview-row{display:flex;align-items:center;gap:8px;margin-top:10px}
+  .cp-preview{width:32px;height:32px;border-radius:50%;border:2px solid var(--border2);flex-shrink:0}
+  .cp-hex{font-family:'IBM Plex Mono',monospace;font-size:12px;padding:4px 8px;border:1px solid var(--border);border-radius:4px;background:var(--surface);color:var(--text);flex:1;width:0}
+  .cp-apply{padding:5px 12px;font-size:12px;font-weight:500;border:none;border-radius:4px;background:var(--text);color:var(--surface);cursor:pointer}
+  .cp-apply:hover{opacity:.85}
+  .cp-recents{display:flex;flex-wrap:wrap;gap:5px;margin-top:10px;padding-top:10px;border-top:1px solid var(--border);min-height:18px}
+  .cp-recent-dot{width:20px;height:20px;border-radius:50%;cursor:pointer;border:2px solid rgba(0,0,0,.15);flex-shrink:0;transition:transform .12s}
+  .cp-recent-dot:hover{transform:scale(1.2)}
+  .cp-recents-label{font-size:10px;color:var(--text3);width:100%;margin-bottom:2px;font-weight:500}
   .color-dot{width:10px;height:10px;border-radius:50%;flex-shrink:0;display:inline-block}
   .empty-state{text-align:center;padding:3rem 1rem;color:var(--text3);border:1.5px dashed var(--border2);border-radius:var(--radius);font-size:13px}
   .empty-state strong{display:block;font-size:15px;color:var(--text2);margin-bottom:6px}
@@ -153,7 +174,7 @@
         <p class="page-desc">Cada sección puede tener varias sesiones semanales (ej: Lun + Mié).</p>
       </div>
       <div style="display:flex;gap:8px;flex-wrap:wrap">
-        <button class="btn" onclick="importCourses()" title="Cargar cursos desde archivo">⬆ Importar</button>
+        <button class="btn" onclick="importCourses()" title="Cargar cursos desde archivo JSON">⬆ Importar JSON</button>
         <button class="btn" onclick="exportCourses()" title="Guardar cursos como archivo">⬇ Exportar</button>
         <button class="btn btn-primary" onclick="addCourse()">+ Agregar curso</button>
       </div>
@@ -191,23 +212,59 @@
 <script>
 const DIAS=['Lun','Mar','Mié','Jue','Vie','Sáb'];
 const HORAS=['07:00','08:00','09:00','10:00','11:00','12:00','13:00','14:00','15:00','16:00','17:00','18:00','19:00','20:00','21:00'];
-const PAL=[
+// Default palette for courses without a custom color
+const DEF_COLORS=[
   {bg:'#dbeafe',fg:'#1e40af'},{bg:'#d1fae5',fg:'#065f46'},{bg:'#fef3c7',fg:'#92400e'},
   {bg:'#fce7f3',fg:'#9d174d'},{bg:'#ede9fe',fg:'#4c1d95'},{bg:'#ffedd5',fg:'#7c2d12'},
   {bg:'#dcfce7',fg:'#14532d'},{bg:'#e0f2fe',fg:'#0c4a6e'},
 ];
+const PAL = DEF_COLORS; // legacy alias
+
+// Convert HSV to hex
+function hsvToHex(h,s,v){
+  s/=100; v/=100;
+  const f=(n,k=(n+h/60)%6)=>v-v*s*Math.max(Math.min(k,4-k,1),0);
+  const r=Math.round(f(5)*255),g=Math.round(f(3)*255),b=Math.round(f(1)*255);
+  return '#'+[r,g,b].map(x=>x.toString(16).padStart(2,'0')).join('');
+}
+// Hex to HSV
+function hexToHsv(hex){
+  const r=parseInt(hex.slice(1,3),16)/255,g=parseInt(hex.slice(3,5),16)/255,b=parseInt(hex.slice(5,7),16)/255;
+  const max=Math.max(r,g,b),min=Math.min(r,g,b),d=max-min;
+  let h=0;
+  if(d){
+    if(max===r) h=((g-b)/d)%6;
+    else if(max===g) h=(b-r)/d+2;
+    else h=(r-g)/d+4;
+    h=Math.round(h*60); if(h<0) h+=360;
+  }
+  return {h, s:max?Math.round(d/max*100):0, v:Math.round(max*100)};
+}
+// Given a hue color, generate light bg + dark fg
+function hueToTheme(hex){
+  const hsv=hexToHsv(hex);
+  const bg=hsvToHex(hsv.h, Math.min(hsv.s,30), 97);
+  const fg=hsvToHex(hsv.h, Math.min(hsv.s+40,100), Math.max(hsv.v-40,25));
+  return {bg,fg};
+}
+function getPal(course, ci){
+  if(course.colorHex){
+    return hueToTheme(course.colorHex);
+  }
+  return DEF_COLORS[ci % DEF_COLORS.length];
+}
 
 // Model: courses[{id, name, sections:[{id, teacher, sessions:[{day,start,end}]}]}]
 let courses=JSON.parse(localStorage.getItem('horarios_v2')||'null')||[
-  {id:1,name:'Cálculo II',sections:[
+  {id:1,name:'Cálculo II',code:'MA-201',colorHex:'#3b82f6',sections:[
     {id:'A',teacher:'Dr. Pérez',sessions:[{day:'Lun',start:'08:00',end:'10:00',type:'T'},{day:'Mié',start:'08:00',end:'10:00',type:'T'}]},
     {id:'B',teacher:'Mg. Torres',sessions:[{day:'Mar',start:'14:00',end:'16:00',type:'T'},{day:'Jue',start:'14:00',end:'16:00',type:'T'}]},
   ]},
-  {id:2,name:'Física I',sections:[
+  {id:2,name:'Física I',code:'FI-101',colorHex:'#10b981',sections:[
     {id:'A',teacher:'Dr. Quispe',sessions:[{day:'Lun',start:'10:00',end:'12:00',type:'T'},{day:'Vie',start:'10:00',end:'12:00',type:'T'}]},
     {id:'B',teacher:'Dr. Quispe',sessions:[{day:'Mar',start:'08:00',end:'10:00',type:'T'},{day:'Jue',start:'08:00',end:'10:00',type:'T'}]},
   ]},
-  {id:3,name:'Álgebra Lineal',sections:[
+  {id:3,name:'Álgebra Lineal',code:'MA-101',colorHex:'#f59e0b',sections:[
     {id:'A',teacher:'Mg. Vargas',sessions:[{day:'Mié',start:'12:00',end:'14:00',type:'T'},{day:'Vie',start:'12:00',end:'14:00',type:'T'}]},
   ]},
 ];
@@ -233,15 +290,22 @@ function renderCourses(){
   const el=document.getElementById('courses-list');
   if(!courses.length){el.innerHTML='<div class="empty-state"><strong>No hay cursos aún</strong>Usa el botón "Agregar curso" para empezar.</div>';return;}
   el.innerHTML=courses.map((c,ci)=>{
-    const p=PAL[ci%PAL.length];
+    const p=getPal(c,ci);
+    const initHex=c.colorHex||'#3b82f6';
     return `<div class="card">
       <div class="card-header">
-        <div style="display:flex;align-items:center;gap:8px;flex:1;min-width:0">
-          <span class="color-dot" style="background:${p.bg};border:2px solid ${p.fg}"></span>
+        <div style="display:flex;align-items:center;gap:8px;flex:1;min-width:0;flex-wrap:wrap">
+          <div style="position:relative;flex-shrink:0">
+            <div class="color-swatch" style="background:${p.bg};border-color:${p.fg}"
+              onclick="openCPicker(event,${c.id},'${initHex}')" title="Cambiar color"></div>
+          </div>
           <span class="course-name" contenteditable="true"
             onblur="updCourseName(${c.id},this.textContent.trim())"
             onkeydown="if(event.key==='Enter'){event.preventDefault();this.blur()}"
           >${esc(c.name)}</span>
+          <input class="course-code-input" value="${esc(c.code||'')}"
+            onchange="updCourseCode(${c.id},this.value)"
+            placeholder="Código" title="Código del curso">
           <span class="badge">${c.sections.length} secc.</span>
         </div>
         <div style="display:flex;gap:6px;flex-shrink:0">
@@ -291,8 +355,159 @@ function renderCourses(){
   }).join('');
 }
 
+function updCourseCode(id,code){
+  const c=courses.find(x=>x.id===id);if(c){c.code=code.trim();save();}
+}
+// ── HSV COLOR PICKER ────────────────────────────────────────────
+let cpCourseId=null, cpH=210, cpS=70, cpV=80;
+const MAX_RECENTS = 14;
+
+function loadRecents(){
+  try{ return JSON.parse(localStorage.getItem('horarios_recents')||'[]'); }
+  catch(e){ return []; }
+}
+function saveRecent(hex){
+  try{
+    let r = loadRecents().filter(c=>c.toLowerCase()!==hex.toLowerCase());
+    r.unshift(hex);
+    if(r.length>MAX_RECENTS) r=r.slice(0,MAX_RECENTS);
+    localStorage.setItem('horarios_recents', JSON.stringify(r));
+  }catch(e){ console.error('saveRecent error:', e); }
+}
+function renderRecents(){
+  const el=document.getElementById('cp-recents-row');
+  if(!el) return;
+  const recents=loadRecents();
+  if(!recents.length){ el.innerHTML='<span class="cp-recents-label">Sin colores recientes</span>'; return; }
+  el.innerHTML='<span class="cp-recents-label">Recientes</span>'
+    + recents.map(hex=>`<div class="cp-recent-dot" style="background:${hex}" title="${hex}" onclick="cpPickRecent('${hex}')"></div>`).join('');
+}
+function cpPickRecent(hex){
+  const hsv=hexToHsv(hex);
+  cpH=hsv.h; cpS=hsv.s; cpV=hsv.v;
+  cpRender();
+}
+
+function openCPicker(event, courseId, initHex){
+  event.stopPropagation();
+  cpCourseId = Number(courseId);
+  const hsv = hexToHsv(initHex||'#3b82f6');
+  cpH=hsv.h; cpS=hsv.s; cpV=hsv.v;
+
+  // Remove any existing picker
+  const old=document.getElementById('global-cpicker');
+  if(old) old.remove();
+
+  const picker = document.createElement('div');
+  picker.className='cpicker open';
+  picker.id='global-cpicker';
+  picker.onclick=e=>e.stopPropagation();
+  picker.innerHTML=`
+    <div class="cp-sv" id="cp-sv">
+      <div class="cp-sv-white"></div>
+      <div class="cp-sv-black"></div>
+      <div class="cp-pointer" id="cp-ptr"></div>
+    </div>
+    <div class="cp-hue" id="cp-hue"><div class="cp-hue-thumb" id="cp-hthumb"></div></div>
+    <div class="cp-preview-row">
+      <div class="cp-preview" id="cp-preview"></div>
+      <input class="cp-hex" id="cp-hexinput" maxlength="7" onchange="cpHexInput(this.value)">
+      <button class="cp-apply" onclick="event.stopPropagation();cpApply()">OK</button>
+    </div>
+    <div class="cp-recents" id="cp-recents-row"></div>`;
+  renderRecents();
+
+  // Position near the swatch
+  const swatch = event.currentTarget;
+  const rect = swatch.getBoundingClientRect();
+  picker.style.position='fixed';
+  picker.style.top=(rect.bottom+6)+'px';
+  picker.style.left=rect.left+'px';
+  document.body.appendChild(picker);
+  cpRender();
+
+  // SV drag
+  const sv=document.getElementById('cp-sv');
+  function svDrag(e){
+    const r=sv.getBoundingClientRect();
+    const cx=e.touches?e.touches[0].clientX:e.clientX;
+    const cy=e.touches?e.touches[0].clientY:e.clientY;
+    cpS=Math.round(Math.max(0,Math.min(1,(cx-r.left)/r.width))*100);
+    cpV=Math.round(Math.max(0,Math.min(1,1-(cy-r.top)/r.height))*100);
+    cpRender();
+  }
+  sv.onmousedown=e=>{e.preventDefault();svDrag(e);
+    const mm=e2=>{svDrag(e2);};
+    const mu=()=>{document.removeEventListener('mousemove',mm);document.removeEventListener('mouseup',mu);};
+    document.addEventListener('mousemove',mm);document.addEventListener('mouseup',mu);
+  };
+
+  // Hue drag
+  const hue=document.getElementById('cp-hue');
+  function hueDrag(e){
+    const r=hue.getBoundingClientRect();
+    const cx=e.touches?e.touches[0].clientX:e.clientX;
+    cpH=Math.round(Math.max(0,Math.min(1,(cx-r.left)/r.width))*360);
+    cpRender();
+  }
+  hue.onmousedown=e=>{e.preventDefault();hueDrag(e);
+    const mm=e2=>{hueDrag(e2);};
+    const mu=()=>{document.removeEventListener('mousemove',mm);document.removeEventListener('mouseup',mu);};
+    document.addEventListener('mousemove',mm);document.addEventListener('mouseup',mu);
+  };
+
+  // Adjust if off-screen
+  requestAnimationFrame(()=>{
+    const pr=picker.getBoundingClientRect();
+    if(pr.right>window.innerWidth-8) picker.style.left=(window.innerWidth-pr.width-8)+'px';
+    if(pr.bottom>window.innerHeight-8) picker.style.top=(rect.top-pr.height-6)+'px';
+  });
+}
+
+function cpRender(){
+  const pureHue=hsvToHex(cpH,100,100);
+  const sv=document.getElementById('cp-sv');
+  if(sv) sv.style.background=pureHue;
+  const ptr=document.getElementById('cp-ptr');
+  if(ptr){ptr.style.left=cpS+'%';ptr.style.top=(100-cpV)+'%';}
+  const ht=document.getElementById('cp-hthumb');
+  if(ht) ht.style.left=(cpH/360*100)+'%';
+  const hex=hsvToHex(cpH,cpS,cpV);
+  const prev=document.getElementById('cp-preview');
+  if(prev) prev.style.background=hex;
+  const hi=document.getElementById('cp-hexinput');
+  if(hi && document.activeElement!==hi) hi.value=hex;
+}
+
+function cpHexInput(val){
+  if(/^#[0-9a-fA-F]{6}$/.test(val)){
+    const hsv=hexToHsv(val);
+    cpH=hsv.h;cpS=hsv.s;cpV=hsv.v;cpRender();
+  }
+}
+
+function cpApply(){
+  const hex=hsvToHex(cpH,cpS,cpV);
+  // Debug
+  console.log('cpApply hex=',hex,'cpCourseId=',cpCourseId,'type=',typeof cpCourseId);
+  console.log('courses ids=', courses.map(c=>c.id+' ('+typeof c.id+')'));
+  saveRecent(hex);
+  console.log('recents after save=', loadRecents());
+  const course=courses.find(x=>x.id===Number(cpCourseId));
+  console.log('found course=',course);
+  if(course){ course.colorHex=hex; save(); }
+  const p=document.getElementById('global-cpicker');
+  if(p) p.remove();
+  renderCourses();
+}
+
+document.addEventListener('click',(e)=>{
+  const p=document.getElementById('global-cpicker');
+  if(p && !p.contains(e.target) && !e.target.classList.contains('color-swatch')) p.remove();
+});
+
 function addCourse(){
-  courses.push({id:nextId++,name:'Nuevo curso',sections:[{id:'A',teacher:'',sessions:[{day:'Lun',start:'08:00',end:'10:00',type:'T'}]}]});
+  courses.push({id:nextId++,name:'Nuevo curso',code:'',colorHex:'',sections:[{id:'A',teacher:'',sessions:[{day:'Lun',start:'08:00',end:'10:00',type:'T'}]}]});
   save();renderCourses();
 }
 function removeCourse(id){if(!confirm('¿Eliminar este curso?'))return;courses=courses.filter(c=>c.id!==id);save();renderCourses();}
@@ -494,7 +709,7 @@ function generate(){
       <div class="combo-num">Combinación ${globalIdx+1}</div>
       ${r.combo.map(x=>{
         const dias=x.section.sessions.map(s=>s.day+' '+s.start+'–'+s.end).join(' · ');
-        return `<div class="combo-item"><strong>${esc(x.course.name)}</strong> Sec.${esc(x.section.id)}<br><span style="font-size:11px">${dias}</span></div>`;
+        return `<div class="combo-item"><strong>${esc(x.course.name)}</strong>${x.course.code?' <span style="font-family:IBM Plex Mono,monospace;font-size:10px;color:var(--text3)">('+esc(x.course.code)+')</span>':''} Sec.${esc(x.section.id)}<br><span style="font-size:11px">${dias}</span></div>`;
       }).join('')}
       ${hasAny
         ? r.overlaps.map(o=>`<div class="combo-tag ${o.forbidden?'tag-bad':o.allowed?'tag-warn':'tag-bad'}">
@@ -546,7 +761,7 @@ function renderResult(){
       const sh=toMin(ses.start),eh=toMin(ses.end);
       HORAS.forEach(h=>{
         if(toMin(h)>=sh&&toMin(h)<eh)
-          grid[h][ses.day].push({name:x.course.name,sec:x.section.id,ci,stype:ses.type||'T',teacher:x.section.teacher||'',salon:ses.salon||'',start:ses.start,end:ses.end,day:ses.day});
+          grid[h][ses.day].push({name:x.course.name,code:x.course.code||'',sec:x.section.id,ci,stype:ses.type||'T',teacher:x.section.teacher||'',salon:ses.salon||'',start:ses.start,end:ses.end,day:ses.day});
       });
     });
   });
@@ -556,11 +771,11 @@ function renderResult(){
     if(!cells.length) return'<td></td>';
     const conflict=cells.length>1; // visual overlap
     const blocks=cells.map(cell=>{
-      const p=PAL[cell.ci%PAL.length];
+      const p=getPal(courses[cell.ci]||{},cell.ci);
       const short=cell.name.length>11?cell.name.substring(0,11)+'…':cell.name;
       const tLabel={'T':'T','P':'P','L':'Lab'}[cell.stype]||'T';
       const tStyle={'T':'background:#dbeafe;color:#1e40af','P':'background:#d1fae5;color:#065f46','L':'background:#fef3c7;color:#92400e'}[cell.stype]||'background:#dbeafe;color:#1e40af';
-      const dataInfo=encodeURIComponent(JSON.stringify({name:cell.name,sec:cell.sec,stype:cell.stype,teacher:cell.teacher,salon:cell.salon,start:cell.start,end:cell.end,day:cell.day}));
+      const dataInfo=encodeURIComponent(JSON.stringify({name:cell.name,code:cell.code,sec:cell.sec,stype:cell.stype,teacher:cell.teacher,salon:cell.salon,start:cell.start,end:cell.end,day:cell.day}));
       return `<div class="cell-block" style="background:${p.bg};color:${p.fg};${conflict?'border:1px solid #c0392b;':''}cursor:pointer" onclick="showBlockInfo(event,this,'${dataInfo}')">${esc(short)}<br><span style="font-size:9px">Sec.${esc(cell.sec)} <span style="${tStyle};font-size:9px;padding:0 3px;border-radius:3px;font-weight:600">${tLabel}</span></span></div>`;
     }).join('');
     return `<td style="${conflict?'background:#fdf0ef;':''}">${blocks}</td>`;
@@ -572,13 +787,15 @@ function renderResult(){
   </div>`:'';
 
   const legend=combo.map(x=>{
-    const ci=courses.findIndex(c=>c.id===x.course.id),p=PAL[ci%PAL.length];
+    const ci=courses.findIndex(c=>c.id===x.course.id),p=getPal(courses[ci]||{},ci);
     const sesStr=x.section.sessions.map(s=>s.day+' '+s.start+'–'+s.end).join(' · ');
-    return `<div class="legend-item"><span class="color-dot" style="background:${p.bg};border:2px solid ${p.fg}"></span><strong>${esc(x.course.name)}</strong> Sec.${esc(x.section.id)}${x.section.teacher?' · '+esc(x.section.teacher):''}<span style="color:var(--text3);font-size:11px">${sesStr}</span></div>`;
+    return `<div class="legend-item"><span class="color-dot" style="background:${p.bg};border:2px solid ${p.fg}"></span><strong>${esc(x.course.name)}</strong>${x.course.code?' <span style="font-family:IBM Plex Mono,monospace;font-size:10px;color:var(--text3)">('+esc(x.course.code)+')</span>':''} Sec.${esc(x.section.id)}${x.section.teacher?' · '+esc(x.section.teacher):''}<span style="color:var(--text3);font-size:11px">${sesStr}</span></div>`;
   }).join('');
 
   el.innerHTML=`${conflictBanner}<div class="schedule-wrap"><table class="schedule-table"><thead><tr><th></th>${DIAS.map(d=>`<th>${d}</th>`).join('')}</tr></thead><tbody>${rows}</tbody></table></div><div class="legend">${legend}</div>`;
 }
+
+
 
 // Export / Import
 function exportCourses(){
@@ -644,7 +861,7 @@ function showBlockInfo(event, el, encoded){
   event.stopPropagation();
   const info = JSON.parse(decodeURIComponent(encoded));
   const typeNames = {T:'Teoría', P:'Práctica', L:'Laboratorio'};
-  document.getElementById('pp-name').textContent    = info.name;
+  document.getElementById('pp-name').textContent    = info.name + (info.code ? ' ('+info.code+')' : '');
   document.getElementById('pp-sec').textContent     = 'Sección ' + info.sec;
   document.getElementById('pp-type').textContent    = typeNames[info.stype] || info.stype;
   document.getElementById('pp-day').textContent     = info.day;
