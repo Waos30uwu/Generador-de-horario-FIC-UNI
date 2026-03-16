@@ -82,6 +82,16 @@
   .course-check-item input[type=checkbox]{accent-color:var(--accent);width:15px;height:15px;cursor:pointer}
   .check-label{font-size:13px;font-weight:500;flex:1}
   .check-secs{font-size:11px;color:var(--text3);font-family:'IBM Plex Mono',monospace}
+  .course-selector-block{background:var(--surface);border:1px solid var(--border);border-radius:var(--radius);margin-bottom:10px;overflow:hidden}
+  .course-selector-header{display:flex;align-items:center;gap:10px;padding:10px 14px;cursor:pointer;transition:background .15s}
+  .course-selector-header:hover{background:var(--surface2)}
+  .course-selector-header.checked{background:var(--accent-bg);border-left:3px solid var(--accent)}
+  .course-selector-header.unchecked{opacity:.5}
+  .sec-check-list{padding:6px 14px 10px 38px;display:flex;flex-wrap:wrap;gap:6px;border-top:1px solid var(--border)}
+  .sec-check-pill{display:inline-flex;align-items:center;gap:5px;padding:4px 10px;border:1px solid var(--border);border-radius:20px;font-size:12px;cursor:pointer;transition:background .15s,border-color .15s;background:var(--surface);user-select:none}
+  .sec-check-pill:hover{border-color:var(--border2);background:var(--surface2)}
+  .sec-check-pill.on{background:var(--accent-bg);border-color:var(--accent);color:var(--accent-t);font-weight:500}
+  .sec-check-pill input{accent-color:var(--accent);width:13px;height:13px}
   .stats-row{display:flex;gap:10px;margin-bottom:1.5rem;flex-wrap:wrap}
   .stat-card{background:var(--surface);border:1px solid var(--border);border-radius:var(--radius-sm);padding:10px 18px;text-align:center;box-shadow:var(--shadow);min-width:100px}
   .stat-val{font-size:24px;font-weight:600;letter-spacing:-.5px;font-family:'IBM Plex Mono',monospace}
@@ -203,6 +213,7 @@ let courses=JSON.parse(localStorage.getItem('horarios_v2')||'null')||[
 ];
 let nextId=Math.max(...courses.map(c=>c.id),0)+1;
 let selIds=courses.map(c=>c.id);
+let selSecIds={}; // {courseId: [sectionId, ...]}
 let allResults=[],selectedCombo=null;
 
 function save(){localStorage.setItem('horarios_v2',JSON.stringify(courses));}
@@ -312,23 +323,57 @@ function updSes(cid,sid,si,f,v){
 }
 
 // Generator
+function initSelSecs(){
+  // Initialize selSecIds for any course not yet tracked
+  courses.forEach(c=>{
+    if(!selSecIds[c.id]) selSecIds[c.id] = c.sections.map(s=>s.id);
+  });
+}
+
 function renderSelector(){
+  initSelSecs();
   const el=document.getElementById('course-selector');
   if(!courses.length){el.innerHTML='<div class="empty-state"><strong>No hay cursos</strong>Ve a la pestaña Cursos para agregar.</div>';return;}
-  el.innerHTML=`<div class="course-check-grid">${courses.map((c,ci)=>{
-    const p=PAL[ci%PAL.length],chk=selIds.includes(c.id);
-    return `<label class="course-check-item ${chk?'checked':''}" onclick="toggleChk(this,${c.id})">
-      <input type="checkbox" ${chk?'checked':''} onclick="event.stopPropagation();toggleChk(this.closest('label'),${c.id})">
-      <span class="color-dot" style="background:${p.bg};border:2px solid ${p.fg}"></span>
-      <span class="check-label">${esc(c.name)}</span>
-      <span class="check-secs">${c.sections.length}s</span>
-    </label>`;
-  }).join('')}</div>`;
+  el.innerHTML = courses.map((c,ci)=>{
+    const p=PAL[ci%PAL.length];
+    const chk=selIds.includes(c.id);
+    const secIds=selSecIds[c.id]||[];
+    const secPills=c.sections.map(s=>{
+      const on=secIds.includes(s.id);
+      return `<div class="sec-check-pill ${on?'on':''}" onclick="toggleSec(event,${c.id},'${s.id}')">
+        Sec. ${esc(s.id)}
+      </div>`;
+    }).join('');
+    return `<div class="course-selector-block">
+      <div class="course-selector-header ${chk?'checked':'unchecked'}" id="csh-${c.id}" onclick="toggleChk(${c.id})">
+        <input type="checkbox" ${chk?'checked':''} onclick="event.stopPropagation();toggleChk(${c.id})" style="accent-color:var(--accent);width:15px;height:15px">
+        <span class="color-dot" style="background:${p.bg};border:2px solid ${p.fg}"></span>
+        <span style="font-size:14px;font-weight:500;flex:1">${esc(c.name)}</span>
+        <span class="check-secs">${secIds.length}/${c.sections.length} secciones</span>
+      </div>
+      ${chk ? `<div class="sec-check-list">${secPills}</div>` : ''}
+    </div>`;
+  }).join('');
 }
-function toggleChk(el,id){
-  const cb=el.querySelector('input[type=checkbox]'),on=!cb.checked;cb.checked=on;
-  el.classList.toggle('checked',on);
-  if(on){if(!selIds.includes(id))selIds.push(id);}else{selIds=selIds.filter(x=>x!==id);}
+
+function toggleChk(id){
+  const on=!selIds.includes(id);
+  if(on){ if(!selIds.includes(id)) selIds.push(id); }
+  else { selIds=selIds.filter(x=>x!==id); }
+  renderSelector();
+}
+
+function toggleSec(event, cid, sid){
+  event.stopPropagation();
+  if(!selSecIds[cid]) selSecIds[cid]=[];
+  const arr=selSecIds[cid];
+  const idx=arr.indexOf(sid);
+  if(idx>=0) arr.splice(idx,1); else arr.push(sid);
+  // If no sections selected, uncheck the whole course
+  if(arr.length===0) selIds=selIds.filter(x=>x!==cid);
+  // If course was unchecked and we're adding a section, check it
+  else if(!selIds.includes(cid)) selIds.push(cid);
+  renderSelector();
 }
 
 // Returns overlap hours between two sessions (0 if different day or no overlap)
@@ -376,13 +421,20 @@ function cartesian(arrays){
 }
 
 function generate(){
+  initSelSecs();
   const sel=courses.filter(c=>selIds.includes(c.id));
   const out=document.getElementById('combos-out');
   if(!sel.length){out.innerHTML='<div class="empty-state"><strong>Selecciona al menos un curso</strong></div>';return;}
-  const total=sel.reduce((a,c)=>a*c.sections.length,1);
+  const total=sel.reduce((a,c)=>{ const allowed=selSecIds[c.id]||c.sections.map(s=>s.id); return a*(c.sections.filter(s=>allowed.includes(s.id)).length||c.sections.length); },1);
   if(total>1000&&!confirm(`Se generarán ${total} combinaciones. ¿Continuar?`))return;
 
-  const combos=cartesian(sel.map(c=>c.sections.map(s=>({course:c,section:s}))));
+  // Filter sections per course based on selSecIds
+  const selCoursesSecs = sel.map(c=>{
+    const allowedSecs = selSecIds[c.id]||c.sections.map(s=>s.id);
+    const filteredSecs = c.sections.filter(s=>allowedSecs.includes(s.id));
+    return {course:c, sections: filteredSecs.length ? filteredSecs : c.sections};
+  });
+  const combos=cartesian(selCoursesSecs.map(x=>x.sections.map(s=>({course:x.course,section:s}))));
   allResults=combos.map(combo=>{
     // overlaps = all pairs that physically overlap (used for grouping & visual count)
     // each overlap has: label, allowed (bool), forbidden (bool)
@@ -569,6 +621,7 @@ function handleImport(input){
   reader.readAsText(file);
 }
 
+initSelSecs();
 renderCourses();
 </script>
 
