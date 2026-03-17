@@ -917,12 +917,12 @@ function selCombo(i,event){
   if(titleEl) titleEl.textContent='Combinación N°'+(i+1);
 
   if(event&&(event.ctrlKey||event.metaKey)){
-    localStorage.setItem('horarios_open_combo', JSON.stringify({
+    const payload = btoa(encodeURIComponent(JSON.stringify({
       idx: i,
       selIds: selIds,
       selSecIds: selSecIds
-    }));
-    window.open(location.href, '_blank');
+    })));
+    window.open(location.href.split('#')[0] + '#combo=' + payload, '_blank');
   } else {
     showPage('resultado');
   }
@@ -1297,46 +1297,48 @@ applySettings(false);
 initSelSecs();
 renderCourses();
 
-// If opened via Ctrl+click, jump straight to the combo result
-const _openCombo = localStorage.getItem('horarios_open_combo');
-if(_openCombo !== null){
-  localStorage.removeItem('horarios_open_combo');
-  const _saved = JSON.parse(_openCombo);
-  const _idx = _saved.idx;
-  // Restore exact selection state from the original tab
-  selIds    = _saved.selIds;
-  selSecIds = _saved.selSecIds;
+// If opened via Ctrl+click, read combo data from URL hash
+const _hashMatch = location.hash.match(/^#combo=(.+)$/);
+if(_hashMatch){
+  try {
+    const _saved = JSON.parse(decodeURIComponent(atob(_hashMatch[1])));
+    const _idx = _saved.idx;
+    selIds    = _saved.selIds;
+    selSecIds = _saved.selSecIds;
+    // Clean the hash from the URL without reloading
+    history.replaceState(null, '', location.pathname + location.search);
 
-  requestAnimationFrame(()=>{
-    const _sel = courses.filter(c => selIds.includes(c.id));
-    if(_sel.length){
-      const _selCoursesSecs = _sel.map(c=>{
-        const allowed = selSecIds[c.id] || c.sections.map(s=>s.id);
-        const filtered = c.sections.filter(s=>allowed.includes(s.id));
-        return {course:c, sections: filtered.length ? filtered : c.sections};
-      });
-      const _combos = cartesian(_selCoursesSecs.map(x=>x.sections.map(s=>({course:x.course,section:s}))));
-      allResults = _combos.map(combo=>{
-        let overlaps=[];
-        for(let a=0;a<combo.length;a++) for(let b=a+1;b<combo.length;b++){
-          const res=checkSectionConflict(combo[a].section,combo[b].section,
-            combo[a].course.name+' '+combo[a].section.id,
-            combo[b].course.name+' '+combo[b].section.id);
-          if(res){
-            if(res.violation) overlaps.push({label:res.violation,allowed:false,forbidden:res.violation.includes('no permitido')});
-            if(res.allowed)   overlaps.push({label:res.allowed,  allowed:true, forbidden:false});
+    requestAnimationFrame(()=>{
+      const _sel = courses.filter(c => selIds.includes(c.id));
+      if(_sel.length){
+        const _selCoursesSecs = _sel.map(c=>{
+          const allowed = selSecIds[c.id] || c.sections.map(s=>s.id);
+          const filtered = c.sections.filter(s=>allowed.includes(s.id));
+          return {course:c, sections: filtered.length ? filtered : c.sections};
+        });
+        const _combos = cartesian(_selCoursesSecs.map(x=>x.sections.map(s=>({course:x.course,section:s}))));
+        allResults = _combos.map(combo=>{
+          let overlaps=[];
+          for(let a=0;a<combo.length;a++) for(let b=a+1;b<combo.length;b++){
+            const res=checkSectionConflict(combo[a].section,combo[b].section,
+              combo[a].course.name+' '+combo[a].section.id,
+              combo[b].course.name+' '+combo[b].section.id);
+            if(res){
+              if(res.violation) overlaps.push({label:res.violation,allowed:false,forbidden:res.violation.includes('no permitido')});
+              if(res.allowed)   overlaps.push({label:res.allowed,  allowed:true, forbidden:false});
+            }
           }
+          return {combo, overlaps};
+        });
+        if(allResults[_idx]){
+          selectedCombo = allResults[_idx];
+          const titleEl = document.getElementById('result-title');
+          if(titleEl) titleEl.textContent = 'Combinación N°'+(_idx+1);
+          showPage('resultado');
         }
-        return {combo, overlaps};
-      });
-      if(allResults[_idx]){
-        selectedCombo = allResults[_idx];
-        const titleEl = document.getElementById('result-title');
-        if(titleEl) titleEl.textContent = 'Combinación N°'+(_idx+1);
-        showPage('resultado');
       }
-    }
-  });
+    });
+  } catch(e) { console.error('Error al leer combo desde URL:', e); }
 }
 </script>
 
