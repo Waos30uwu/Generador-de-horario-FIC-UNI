@@ -4,6 +4,7 @@
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <title>Generador de Horarios</title>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/html2canvas/1.4.1/html2canvas.min.js"></script>
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link href="https://fonts.googleapis.com/css2?family=IBM+Plex+Sans:wght@400;500;600&family=IBM+Plex+Mono:wght@400;500&display=swap" rel="stylesheet">
 <style>
@@ -201,7 +202,11 @@
         <h1 class="page-title">Horario seleccionado</h1>
         <p class="page-desc">Vista semanal de la combinación elegida.</p>
       </div>
-      <button class="btn" onclick="showPage('generar')">← Volver</button>
+      <div style="display:flex;gap:8px;flex-wrap:wrap">
+        <button class="btn" onclick="downloadSchedule('jpg')">⬇ JPG</button>
+        <button class="btn" onclick="downloadSchedule('pdf')">⬇ PDF</button>
+        <button class="btn" onclick="showPage('generar')">← Volver</button>
+      </div>
     </div>
     <div id="result-out"></div>
   </div>
@@ -255,19 +260,7 @@ function getPal(course, ci){
 }
 
 // Model: courses[{id, name, sections:[{id, teacher, sessions:[{day,start,end}]}]}]
-let courses=JSON.parse(localStorage.getItem('horarios_v2')||'null')||[
-  {id:1,name:'Cálculo II',code:'MA-201',colorHex:'#3b82f6',sections:[
-    {id:'A',teacher:'Dr. Pérez',sessions:[{day:'Lun',start:'08:00',end:'10:00',type:'T'},{day:'Mié',start:'08:00',end:'10:00',type:'T'}]},
-    {id:'B',teacher:'Mg. Torres',sessions:[{day:'Mar',start:'14:00',end:'16:00',type:'T'},{day:'Jue',start:'14:00',end:'16:00',type:'T'}]},
-  ]},
-  {id:2,name:'Física I',code:'FI-101',colorHex:'#10b981',sections:[
-    {id:'A',teacher:'Dr. Quispe',sessions:[{day:'Lun',start:'10:00',end:'12:00',type:'T'},{day:'Vie',start:'10:00',end:'12:00',type:'T'}]},
-    {id:'B',teacher:'Dr. Quispe',sessions:[{day:'Mar',start:'08:00',end:'10:00',type:'T'},{day:'Jue',start:'08:00',end:'10:00',type:'T'}]},
-  ]},
-  {id:3,name:'Álgebra Lineal',code:'MA-101',colorHex:'#f59e0b',sections:[
-    {id:'A',teacher:'Mg. Vargas',sessions:[{day:'Mié',start:'12:00',end:'14:00',type:'T'},{day:'Vie',start:'12:00',end:'14:00',type:'T'}]},
-  ]},
-];
+let courses=JSON.parse(localStorage.getItem('horarios_v2')||'null')||[{"id":1,"name":"Mecánica de Fluidos 2","code":"HH-224","colorHex":"#3bf5e8","sections":[{"id":"G","teacher":"Julio Kuroiwa","sessions":[{"day":"Vie","start":"08:00","end":"10:00","type":"T","salon":"G2-122"},{"day":"Sáb","start":"08:00","end":"10:00","type":"T","salon":"G2-102"},{"day":"Lun","start":"14:00","end":"16:00","type":"P","salon":"G2-202"}]},{"id":"H","teacher":"Edgar Zubiarte","sessions":[{"day":"Mar","start":"10:00","end":"12:00","type":"T","salon":"G2-202"},{"day":"Jue","start":"10:00","end":"12:00","type":"T","salon":"G2-242"},{"day":"Mié","start":"10:00","end":"12:00","type":"P","salon":"G2-232"}]},{"id":"I","teacher":"Marisa Silva","sessions":[{"day":"Mié","start":"10:00","end":"12:00","type":"T","salon":"G2-152"},{"day":"Jue","start":"10:00","end":"12:00","type":"T","salon":"G2-102"},{"day":"Mar","start":"16:00","end":"18:00","type":"P","salon":"G2-142"}]},{"id":"J","teacher":"Ibañez","sessions":[{"day":"Lun","start":"10:00","end":"12:00","type":"T","salon":"CC-FIC"},{"day":"Mié","start":"10:00","end":"12:00","type":"P","salon":"G2-122"},{"day":"Lun","start":"14:00","end":"16:00","type":"P","salon":"G2-152"}]},{"id":"K","teacher":"Campaña","sessions":[{"day":"Mar","start":"16:00","end":"18:00","type":"T","salon":"G2-132"},{"day":"Mié","start":"16:00","end":"18:00","type":"P","salon":"G2-332"},{"day":"Lun","start":"18:00","end":"20:00","type":"P","salon":"G2-242"}]}]},{"id":3,"name":"Mecánica de Suelos 2","code":"EC-511","colorHex":"#ffff00","sections":[{"id":"G","teacher":"Diana Calderón","sessions":[{"day":"Mié","start":"12:00","end":"14:00","type":"T","salon":""},{"day":"Vie","start":"12:00","end":"14:00","type":"T","salon":""}]},{"id":"H","teacher":"Jorge Cárdenas","sessions":[{"day":"Sáb","start":"10:00","end":"13:00","type":"T","salon":"G2-322"},{"day":"Vie","start":"14:00","end":"16:00","type":"P","salon":"G2-272"}]},{"id":"I","teacher":"Rocío Perez","sessions":[{"day":"Mar","start":"10:00","end":"13:00","type":"T","salon":"G9-201"},{"day":"Lun","start":"14:00","end":"16:00","type":"P","salon":"G2-102"}]},{"id":"J","teacher":"Rocío Perez","sessions":[{"day":"Mié","start":"10:00","end":"13:00","type":"T","salon":"CCFIC"},{"day":"Lun","start":"16:00","end":"18:00","type":"P","salon":"G2-252"}]}]},{"id":4,"name":"Tecnología de la Construcción 2","code":"CO-621","colorHex":"#3ba1f5","sections":[{"id":"G","teacher":"Miranda Hospinal","sessions":[{"day":"Mar","start":"18:00","end":"20:00","type":"T","salon":"G2-102"},{"day":"Vie","start":"15:00","end":"16:00","type":"T","salon":"G2-122"},{"day":"Vie","start":"16:00","end":"18:00","type":"P","salon":"G2-272"}]},{"id":"H","teacher":"Cachay Huaman","sessions":[{"day":"Jue","start":"14:00","end":"15:00","type":"T","salon":"J2-102"},{"day":"Jue","start":"08:00","end":"10:00","type":"T","salon":"G2-202"},{"day":"Sáb","start":"08:00","end":"10:00","type":"P","salon":"G2-132"}]},{"id":"I","teacher":"Huaynalaya Rashuaman","sessions":[{"day":"Vie","start":"17:00","end":"20:00","type":"T","salon":"G2-232"},{"day":"Mié","start":"18:00","end":"20:00","type":"P","salon":"G2-202"}]}]},{"id":5,"name":"Análisis Estructural I","code":"EC-211","colorHex":"#f5a23b","sections":[{"id":"G","teacher":"Olarte Navarro","sessions":[{"day":"Lun","start":"10:00","end":"12:00","type":"T","salon":"G2-132"},{"day":"Mié","start":"10:00","end":"12:00","type":"T","salon":"G2-362"},{"day":"Vie","start":"14:00","end":"16:00","type":"P","salon":"G2-232"}]},{"id":"H","teacher":"Quiroz Torres","sessions":[{"day":"Mar","start":"10:00","end":"12:00","type":"T","salon":"G2-132"},{"day":"Jue","start":"10:00","end":"12:00","type":"T","salon":"G2-362"},{"day":"Sáb","start":"08:00","end":"10:00","type":"P","salon":"G2-142"}]},{"id":"I","teacher":"Vargas Rodriguez","sessions":[{"day":"Lun","start":"18:00","end":"20:00","type":"T","salon":"G2-362"},{"day":"Jue","start":"18:00","end":"20:00","type":"T","salon":"G2-302"},{"day":"Mar","start":"14:00","end":"16:00","type":"P","salon":"G1-212"}]},{"id":"J","teacher":"Gibu Yague","sessions":[{"day":"Mar","start":"08:00","end":"10:00","type":"T","salon":"G2-352"},{"day":"Vie","start":"08:00","end":"10:00","type":"T","salon":"G1-212"},{"day":"Mié","start":"08:00","end":"10:00","type":"P","salon":"G2-262"}]},{"id":"K","teacher":"Reyna Salazar","sessions":[{"day":"Lun","start":"14:00","end":"16:00","type":"T","salon":"G2-352"},{"day":"Mié","start":"14:00","end":"16:00","type":"T","salon":"G2-272"},{"day":"Lun","start":"16:00","end":"18:00","type":"P","salon":"J2-232"}]}]},{"id":7,"name":"Realidad Nacional","code":"BRN-01","colorHex":"#f53b3b","sections":[{"id":"G","teacher":"Vergara Felices","sessions":[{"day":"Mar","start":"10:00","end":"12:00","type":"T","salon":"G1-212"},{"day":"Vie","start":"16:00","end":"18:00","type":"T","salon":"COPRESA"},{"day":"Lun","start":"15:00","end":"17:00","type":"P","salon":"G2-132"}]},{"id":"H","teacher":"Vergara Felices","sessions":[{"day":"Jue","start":"13:00","end":"15:00","type":"T","salon":"G2-262"},{"day":"Vie","start":"10:00","end":"12:00","type":"T","salon":"COPRESA"},{"day":"Vie","start":"14:00","end":"16:00","type":"P","salon":"G1-212"}]},{"id":"I","teacher":"Rios Segura","sessions":[{"day":"Lun","start":"10:00","end":"12:00","type":"T","salon":"G2-322"},{"day":"Vie","start":"08:00","end":"10:00","type":"T","salon":"COPRESA"},{"day":"Mié","start":"08:00","end":"10:00","type":"P","salon":"G2-382"}]}]},{"id":8,"name":"Ingeniería de Transportes","code":"TV-661","colorHex":"#a23bf5","sections":[{"id":"G","teacher":"Matías León","sessions":[{"day":"Mar","start":"14:00","end":"16:00","type":"T","salon":"G2-102"}]},{"id":"H","teacher":"Villavicencio Gutierrez","sessions":[{"day":"Mar","start":"14:00","end":"16:00","type":"T","salon":"G2-122"}]},{"id":"I","teacher":"Caceres Perez","sessions":[{"day":"Mar","start":"14:00","end":"16:00","type":"T","salon":"COPRESA"}]},{"id":"J","teacher":"Grandez Ventura","sessions":[{"day":"Mar","start":"14:00","end":"16:00","type":"T","salon":"G2-342"}]}]}];
 let nextId=Math.max(...courses.map(c=>c.id),0)+1;
 let selIds=courses.map(c=>c.id);
 let selSecIds={}; // {courseId: [sectionId, ...]}
@@ -301,6 +294,7 @@ function renderCourses(){
           </div>
           <span class="course-name" contenteditable="true"
             onblur="updCourseName(${c.id},this.textContent.trim())"
+            oninput="updCourseNameLive(${c.id},this.textContent.trim())"
             onkeydown="if(event.key==='Enter'){event.preventDefault();this.blur()}"
           >${esc(c.name)}</span>
           <input class="course-code-input" value="${esc(c.code||'')}"
@@ -309,8 +303,8 @@ function renderCourses(){
           <span class="badge">${c.sections.length} secc.</span>
         </div>
         <div style="display:flex;gap:6px;flex-shrink:0">
-          <button class="btn btn-sm" onclick="addSection(${c.id})">+ Sección</button>
-          <button class="btn-icon" onclick="removeCourse(${c.id})">×</button>
+          <button class="btn btn-sm" onmousedown="event.preventDefault()" onclick="addSection(${c.id})">+ Sección</button>
+          <button class="btn-icon" onmousedown="event.preventDefault()" onclick="removeCourse(${c.id})">×</button>
         </div>
       </div>
       ${c.sections.map(s=>`
@@ -319,8 +313,8 @@ function renderCourses(){
             <span class="sec-label">Sec.</span>
             <input class="sec-id-input" value="${esc(s.id)}" onchange="updSec(${c.id},'${s.id}','id',this.value)">
             <span class="sec-label">Docente</span>
-            <input class="sec-teacher-input" value="${esc(s.teacher||'')}" placeholder="Nombre del docente" onchange="updSec(${c.id},'${s.id}','teacher',this.value)">
-            <button class="btn-icon" onclick="removeSection(${c.id},'${s.id}')">×</button>
+            <input class="sec-teacher-input" value="${esc(s.teacher||'')}" placeholder="Nombre del docente" oninput="updSec(${c.id},'${s.id}','teacher',this.value)">
+            <button class="btn-icon" onmousedown="event.preventDefault()" onclick="removeSection(${c.id},'${s.id}')">×</button>
           </div>
           <div class="sessions-list">
             <div class="sessions-header"><span>Día</span><span>Horario</span><span>Tipo</span><span>Salón</span><span></span></div>
@@ -344,17 +338,22 @@ function renderCourses(){
                 <option value="L" ${(ses.type||'T')==='L'?'selected':''}>Laboratorio</option>
               </select>
               <input value="${esc(ses.salon||'')}" onchange="updSes(${c.id},'${s.id}',${si},'salon',this.value)" placeholder="Salón" style="padding:4px 7px;border:1px solid var(--border);border-radius:4px;background:var(--surface);color:var(--text);font-family:inherit;font-size:12px;width:100%">
-              <button class="btn-icon" onclick="removeSes(${c.id},'${s.id}',${si})">×</button>
+              <button class="btn-icon" onmousedown="event.preventDefault()" onclick="removeSes(${c.id},'${s.id}',${si})">×</button>
             </div>`).join('')}
           </div>
           <div class="add-session-row">
-            <button class="btn btn-xs" onclick="addSes(${c.id},'${s.id}')">+ Sesión</button>
+            <button class="btn btn-xs" onmousedown="event.preventDefault()" onclick="addSes(${c.id},'${s.id}')">+ Sesión</button>
           </div>
         </div>`).join('')}
     </div>`;
   }).join('');
 }
 
+function updCourseNameLive(id,name){
+  // Save name immediately on each keystroke without re-rendering
+  const c=courses.find(x=>x.id===id);
+  if(c&&name) { c.name=name; save(); }
+}
 function updCourseCode(id,code){
   const c=courses.find(x=>x.id===id);if(c){c.code=code.trim();save();}
 }
@@ -796,6 +795,65 @@ function renderResult(){
 }
 
 
+
+
+// ── DOWNLOAD SCHEDULE ───────────────────────────────────────────
+function downloadSchedule(format){
+  const el = document.getElementById('result-out');
+  if(!el || !el.querySelector('table')){
+    alert('Primero selecciona una combinación para ver el horario.');
+    return;
+  }
+
+  // Temporarily add white background and padding for capture
+  const prev = el.style.cssText;
+  el.style.background = '#ffffff';
+  el.style.padding = '20px';
+  el.style.borderRadius = '0';
+
+  html2canvas(el, {
+    scale: 2,
+    useCORS: true,
+    backgroundColor: '#ffffff',
+    logging: false,
+  }).then(canvas => {
+    el.style.cssText = prev;
+
+    if(format === 'jpg'){
+      const link = document.createElement('a');
+      link.download = 'horario.jpg';
+      link.href = canvas.toDataURL('image/jpeg', 0.95);
+      link.click();
+
+    } else if(format === 'pdf'){
+      // Build a simple PDF with the image using a data URL in a new window
+      const imgData = canvas.toDataURL('image/jpeg', 0.95);
+      const w = canvas.width / 2;
+      const h = canvas.height / 2;
+      // A4 dimensions in px at 96dpi: 794 x 1123
+      const a4w = 794, a4h = 1123;
+      const ratio = Math.min((a4w - 40) / w, (a4h - 40) / h);
+      const iw = Math.round(w * ratio), ih = Math.round(h * ratio);
+      const win = window.open('','_blank');
+      win.document.write(`<!DOCTYPE html><html><head>
+        <title>Horario</title>
+        <style>
+          *{margin:0;padding:0;box-sizing:border-box}
+          body{width:${a4w}px;display:flex;justify-content:center;align-items:flex-start;padding:20px;background:#fff}
+          img{width:${iw}px;height:${ih}px}
+          @media print{body{padding:0} @page{size:A4;margin:10mm}}
+        </style>
+      </head><body>
+        <img src="${imgData}">
+        <script>window.onload=()=>{window.print();}<\/script>
+      </body></html>`);
+      win.document.close();
+    }
+  }).catch(err=>{
+    el.style.cssText = prev;
+    alert('Error al generar la imagen: ' + err.message);
+  });
+}
 
 // Export / Import
 function exportCourses(){
