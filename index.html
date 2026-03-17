@@ -917,7 +917,11 @@ function selCombo(i,event){
   if(titleEl) titleEl.textContent='Combinación N°'+(i+1);
 
   if(event&&(event.ctrlKey||event.metaKey)){
-    localStorage.setItem('horarios_open_combo', i);
+    localStorage.setItem('horarios_open_combo', JSON.stringify({
+      idx: i,
+      selIds: selIds,
+      selSecIds: selSecIds
+    }));
     window.open(location.href, '_blank');
   } else {
     showPage('resultado');
@@ -1297,10 +1301,13 @@ renderCourses();
 const _openCombo = localStorage.getItem('horarios_open_combo');
 if(_openCombo !== null){
   localStorage.removeItem('horarios_open_combo');
-  const _idx = parseInt(_openCombo);
-  // Courses are loaded, now regenerate all combos silently then show result
+  const _saved = JSON.parse(_openCombo);
+  const _idx = _saved.idx;
+  // Restore exact selection state from the original tab
+  selIds    = _saved.selIds;
+  selSecIds = _saved.selSecIds;
+
   requestAnimationFrame(()=>{
-    initSelSecs();
     const _sel = courses.filter(c => selIds.includes(c.id));
     if(_sel.length){
       const _selCoursesSecs = _sel.map(c=>{
