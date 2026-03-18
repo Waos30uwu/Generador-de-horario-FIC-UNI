@@ -148,12 +148,13 @@
   .combo-tag{margin-top:8px;font-size:0.7857em;font-weight:500;padding:2px 8px;border-radius:20px;display:inline-block}
   .tag-ok{background:var(--success-bg);color:var(--success)}.tag-bad{background:var(--danger-bg);color:var(--danger)}
   .schedule-wrap{overflow-x:auto;border-radius:var(--radius);box-shadow:var(--shadow)}
-  .schedule-table{width:100%;min-width:580px;border-collapse:collapse;background:var(--surface)}
+  .schedule-table{width:100%;min-width:580px;border-collapse:collapse;background:var(--surface);table-layout:fixed}
   .schedule-table th{background:var(--surface2);padding:8px 6px;text-align:center;font-size:0.8571em;font-weight:600;color:var(--text2);border:1px solid var(--border);letter-spacing:.3px}
-  .schedule-table td{border:1px solid var(--border);height:38px;text-align:center;vertical-align:middle;padding:2px}
-  .time-cell{font-size:0.7857em;color:var(--text3);font-family:'IBM Plex Mono',monospace;font-weight:500;background:var(--surface2)!important;width:58px;padding:0 8px}
-  .cell-block{border-radius:5px;padding:3px 5px;font-size:0.7143em;line-height:1.3;font-weight:500;margin:1px}
-  .legend{margin-top:1.25rem;display:flex;flex-wrap:wrap;gap:8px}
+  .schedule-table th:first-child,.schedule-table td.time-cell{width:58px}
+  .schedule-table td{border:1px solid var(--border);height:32px;text-align:center;vertical-align:middle;padding:2px}
+  .time-cell{font-size:0.7857em;color:var(--text3);font-family:'IBM Plex Mono',monospace;font-weight:500;background:var(--surface2)!important;padding:0 8px}
+  .cell-block{border-radius:5px;padding:3px 5px;font-size:0.95em;line-height:1.3;font-weight:500;margin:1px}
+  .legend{margin-top:1.25rem;display:flex;flex-direction:column;gap:8px}
   .legend-item{display:flex;align-items:center;gap:6px;font-size:0.8571em;background:var(--surface);border:1px solid var(--border);border-radius:var(--radius-sm);padding:5px 12px;flex-wrap:wrap}
   footer{text-align:center;padding:2rem;color:var(--text3);font-size:0.8571em;border-top:1px solid var(--border);margin-top:3rem}
   /* Settings panel */
@@ -917,12 +918,12 @@ function selCombo(i,event){
   if(titleEl) titleEl.textContent='Combinación N°'+(i+1);
 
   if(event&&(event.ctrlKey||event.metaKey)){
-    const payload = btoa(encodeURIComponent(JSON.stringify({
+    localStorage.setItem('horarios_open_combo', JSON.stringify({
       idx: i,
       selIds: selIds,
       selSecIds: selSecIds
-    })));
-    window.open(location.href.split('#')[0] + '#combo=' + payload, '_blank');
+    }));
+    window.open(location.href, '_blank');
   } else {
     showPage('resultado');
   }
@@ -1052,8 +1053,8 @@ function renderResult(){
       const tLabel={'T':'T','P':'P','L':'Lab'}[cell.stype]||'T';
       const tStyle={'T':'background:#dbeafe;color:#1e40af','P':'background:#d1fae5;color:#065f46','L':'background:#fef3c7;color:#92400e'}[cell.stype]||'background:#dbeafe;color:#1e40af';
       const dataInfo=encodeURIComponent(JSON.stringify({name:cell.name,code:cell.code,sec:cell.sec,stype:cell.stype,teacher:cell.teacher,salon:cell.salon,start:cell.start,end:cell.end,day:cell.day}));
-      const teacherLine = settings.showTeacher && cell.teacher ? `<br><span style="font-size:0.6em;opacity:.8">${esc(cell.teacher.split(' ')[0])}</span>` : '';
-      return `<div class="cell-block" style="background:${p.bg};color:${p.fg};${conflict?'border:1px solid #c0392b;':''}cursor:pointer" onclick="showBlockInfo(event,this,'${dataInfo}')">${esc(short)}<br><span style="font-size:0.6429em">Sec.${esc(cell.sec)} <span style="${tStyle};font-size:0.6429em;padding:0 3px;border-radius:3px;font-weight:600">${tLabel}</span></span>${teacherLine}</div>`;
+      const teacherLine = settings.showTeacher && cell.teacher ? `<br><span style="font-size:0.8em;opacity:.8">${esc(cell.teacher.split(' ')[0])}</span>` : '';
+      return `<div class="cell-block" style="background:${p.bg};color:${p.fg};${conflict?'border:1px solid #c0392b;':''}cursor:pointer" onclick="showBlockInfo(event,this,'${dataInfo}')">${esc(short)}<br><span style="font-size:0.85em">Sec.${esc(cell.sec)} <span style="${tStyle};font-size:0.85em;padding:0 3px;border-radius:3px;font-weight:600">${tLabel}</span></span>${teacherLine}</div>`;
     }).join('');
     return `<td style="${conflict?'background:#fdf0ef;':''}">${blocks}</td>`;
   }).join('')}</tr>`).join('');
@@ -1089,6 +1090,10 @@ function downloadSchedule(format){
   el.style.padding = '20px';
   el.style.borderRadius = '0';
 
+  // Reset zoom so html2canvas captures at 1:1 scale
+  const prevZoom = document.body.style.zoom;
+  document.body.style.zoom = 1;
+
   html2canvas(el, {
     scale: 2,
     useCORS: true,
@@ -1096,6 +1101,7 @@ function downloadSchedule(format){
     logging: false,
   }).then(canvas => {
     el.style.cssText = prev;
+    document.body.style.zoom = prevZoom;
 
     if(format === 'jpg'){
       const link = document.createElement('a');
@@ -1129,6 +1135,7 @@ function downloadSchedule(format){
     }
   }).catch(err=>{
     el.style.cssText = prev;
+    document.body.style.zoom = prevZoom;
     alert('Error al generar la imagen: ' + err.message);
   });
 }
@@ -1297,48 +1304,46 @@ applySettings(false);
 initSelSecs();
 renderCourses();
 
-// If opened via Ctrl+click, read combo data from URL hash
-const _hashMatch = location.hash.match(/^#combo=(.+)$/);
-if(_hashMatch){
-  try {
-    const _saved = JSON.parse(decodeURIComponent(atob(_hashMatch[1])));
-    const _idx = _saved.idx;
-    selIds    = _saved.selIds;
-    selSecIds = _saved.selSecIds;
-    // Clean the hash from the URL without reloading
-    history.replaceState(null, '', location.pathname + location.search);
+// If opened via Ctrl+click, jump straight to the combo result
+const _openCombo = localStorage.getItem('horarios_open_combo');
+if(_openCombo !== null){
+  localStorage.removeItem('horarios_open_combo');
+  const _saved = JSON.parse(_openCombo);
+  const _idx = _saved.idx;
+  // Restore exact selection state from the original tab
+  selIds    = _saved.selIds;
+  selSecIds = _saved.selSecIds;
 
-    requestAnimationFrame(()=>{
-      const _sel = courses.filter(c => selIds.includes(c.id));
-      if(_sel.length){
-        const _selCoursesSecs = _sel.map(c=>{
-          const allowed = selSecIds[c.id] || c.sections.map(s=>s.id);
-          const filtered = c.sections.filter(s=>allowed.includes(s.id));
-          return {course:c, sections: filtered.length ? filtered : c.sections};
-        });
-        const _combos = cartesian(_selCoursesSecs.map(x=>x.sections.map(s=>({course:x.course,section:s}))));
-        allResults = _combos.map(combo=>{
-          let overlaps=[];
-          for(let a=0;a<combo.length;a++) for(let b=a+1;b<combo.length;b++){
-            const res=checkSectionConflict(combo[a].section,combo[b].section,
-              combo[a].course.name+' '+combo[a].section.id,
-              combo[b].course.name+' '+combo[b].section.id);
-            if(res){
-              if(res.violation) overlaps.push({label:res.violation,allowed:false,forbidden:res.violation.includes('no permitido')});
-              if(res.allowed)   overlaps.push({label:res.allowed,  allowed:true, forbidden:false});
-            }
+  requestAnimationFrame(()=>{
+    const _sel = courses.filter(c => selIds.includes(c.id));
+    if(_sel.length){
+      const _selCoursesSecs = _sel.map(c=>{
+        const allowed = selSecIds[c.id] || c.sections.map(s=>s.id);
+        const filtered = c.sections.filter(s=>allowed.includes(s.id));
+        return {course:c, sections: filtered.length ? filtered : c.sections};
+      });
+      const _combos = cartesian(_selCoursesSecs.map(x=>x.sections.map(s=>({course:x.course,section:s}))));
+      allResults = _combos.map(combo=>{
+        let overlaps=[];
+        for(let a=0;a<combo.length;a++) for(let b=a+1;b<combo.length;b++){
+          const res=checkSectionConflict(combo[a].section,combo[b].section,
+            combo[a].course.name+' '+combo[a].section.id,
+            combo[b].course.name+' '+combo[b].section.id);
+          if(res){
+            if(res.violation) overlaps.push({label:res.violation,allowed:false,forbidden:res.violation.includes('no permitido')});
+            if(res.allowed)   overlaps.push({label:res.allowed,  allowed:true, forbidden:false});
           }
-          return {combo, overlaps};
-        });
-        if(allResults[_idx]){
-          selectedCombo = allResults[_idx];
-          const titleEl = document.getElementById('result-title');
-          if(titleEl) titleEl.textContent = 'Combinación N°'+(_idx+1);
-          showPage('resultado');
         }
+        return {combo, overlaps};
+      });
+      if(allResults[_idx]){
+        selectedCombo = allResults[_idx];
+        const titleEl = document.getElementById('result-title');
+        if(titleEl) titleEl.textContent = 'Combinación N°'+(_idx+1);
+        showPage('resultado');
       }
-    });
-  } catch(e) { console.error('Error al leer combo desde URL:', e); }
+    }
+  });
 }
 </script>
 
